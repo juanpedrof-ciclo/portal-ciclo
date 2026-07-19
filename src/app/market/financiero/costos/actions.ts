@@ -1,0 +1,136 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
+import { subirArchivo } from "@/lib/financiero/storage";
+import {
+  obtenerOCrearCategoria,
+  obtenerOCrearProveedor,
+} from "@/lib/financiero/entidades";
+import type { EstadoFactura, TipoPL } from "@/lib/financiero/types";
+
+export type EstadoFormularioFactura = { error: string | null; ts?: number } | null;
+
+const NUEVO = "__nuevo__";
+
+export async function crearFactura(
+  _prevState: EstadoFormularioFactura,
+  formData: FormData,
+): Promise<EstadoFormularioFactura> {
+  const supabase = await createClient();
+
+  const proveedorSeleccionado = String(formData.get("proveedor_id") ?? "");
+  const nuevoProveedorNombre = String(
+    formData.get("nuevo_proveedor_nombre") ?? "",
+  ).trim();
+  const categoriaSeleccionada = String(formData.get("categoria_id") ?? "");
+  const nuevaCategoriaNombre = String(
+    formData.get("nueva_categoria_nombre") ?? "",
+  ).trim();
+  const nuevaCategoriaTipoPl = String(
+    formData.get("nueva_categoria_tipo_pl") ?? "",
+  ) as TipoPL;
+  const fecha = String(formData.get("fecha") ?? "");
+  const montoTexto = String(formData.get("monto") ?? "");
+  const monto = Number(montoTexto);
+  const estado = String(formData.get("estado") ?? "pendiente") as EstadoFactura;
+  const notas = String(formData.get("notas") ?? "").trim() || null;
+  const soporte = formData.get("soporte");
+
+  if (!proveedorSeleccionado) return { error: "Selecciona o crea un proveedor." };
+  if (proveedorSeleccionado === NUEVO && !nuevoProveedorNombre) {
+    return { error: "Escribe el nombre del nuevo proveedor." };
+  }
+  if (!categoriaSeleccionada) return { error: "Selecciona o crea una categoría." };
+  if (categoriaSeleccionada === NUEVO && !nuevaCategoriaNombre) {
+    return { error: "Escribe el nombre de la nueva categoría." };
+  }
+  if (!fecha) return { error: "Selecciona la fecha de la factura." };
+  if (!montoTexto || Number.isNaN(monto) || monto <= 0) {
+    return { error: "Ingresa un monto válido." };
+  }
+
+  let proveedor_id = proveedorSeleccionado;
+  let categoria_id = categoriaSeleccionada;
+
+  try {
+    if (proveedorSeleccionado === NUEVO) {
+      proveedor_id = await obtenerOCrearProveedor(
+        supabase,
+        nuevoProveedorNombre,
+      );
+    }
+    if (categoriaSeleccionada === NUEVO) {
+      categoria_id = await obtenerOCrearCategoria(
+        supabase,
+        nuevaCategoriaNombre,
+        nuevaCategoriaTipoPl,
+      );
+    }
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Error inesperado." };
+  }
+
+  let soporte_url: string | null = null;
+  if (soporte instanceof File && soporte.size > 0) {
+    try {
+      soporte_url = await subirArchivo(supabase, "facturas-soportes", soporte);
+    } catch (err) {
+      return {
+        error: err instanceof Error ? err.message : "No se pudo subir el soporte.",
+      };
+    }
+  }
+
+  const { error } = await supabase.from("facturas").insert({
+    proveedor_id,
+    categoria_id,
+    fecha,
+    monto,
+    estado,
+    notas,
+    soporte_url,
+  });
+
+  if (error) return { error: `No se pudo guardar la factura: ${error.message}` };
+
+  revalidatePath("/market/financiero/costos");
+  revalidatePath("/market/financiero");
+  revalidatePath("/market/financiero/resultados/pg");
+  revalidatePath("/market/financiero/resultados/cuentas-por-pagar");
+  return { error: null, ts: Date.now() };
+}
+
+export async function anularFactura(id: string): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+
+  const { data: vista } = await supabase
+    .from("vista_facturas_saldo")
+    .select("monto_aplicado")
+    .eq("id", id)
+    .maybeSingle();
+  if (vista && Number(vista.monto_aplicado) > 0.01) {
+    return {
+      error:
+        "Esta factura tiene un pago cruzado. Anula primero el pago aplicado antes de anular esta factura.",
+    };
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { error } = await supabase
+    .from("facturas")
+    .update({ anulado: true, anulado_at: new Date().toISOString(), anulado_por: user?.id ?? null })
+    .eq("id", id);
+  if (error) return { error: `No se pudo anular la factura: ${error.message}` };
+
+  revalidatePath("/market/financiero/costos");
+  revalidatePath("/market/financiero");
+  revalidatePath("/market/financiero/resultados/pg");
+  revalidatePath("/market/financiero/resultados/cuentas-por-pagar");
+  revalidatePath("/market/financiero/pagos");
+
+  return { error: null };
+}
