@@ -8,6 +8,13 @@ import type { Categoria, Proveedor } from "@/lib/financiero/types";
 
 const NUEVO = "__nuevo__";
 
+type DatosFacturaExtraidos = {
+  proveedor: string | null;
+  fecha: string | null;
+  monto: number | null;
+  numero_factura: string | null;
+};
+
 export function FacturaForm({
   proveedores,
   categorias,
@@ -48,7 +55,61 @@ function FacturaFormCampos({
   categorias: Categoria[];
 }) {
   const [proveedorId, setProveedorId] = useState("");
+  const [nuevoProveedorNombre, setNuevoProveedorNombre] = useState("");
   const [categoriaId, setCategoriaId] = useState("");
+  const [fecha, setFecha] = useState("");
+  const [monto, setMonto] = useState("");
+  const [numeroFactura, setNumeroFactura] = useState("");
+
+  const [leyendoIA, setLeyendoIA] = useState(false);
+  const [errorIA, setErrorIA] = useState<string | null>(null);
+  const [completadoPorIA, setCompletadoPorIA] = useState(false);
+
+  async function onArchivoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    setErrorIA(null);
+    setCompletadoPorIA(false);
+    if (!file) return;
+
+    setLeyendoIA(true);
+    try {
+      const fd = new FormData();
+      fd.append("archivo", file);
+      const res = await fetch("/market/financiero/costos/leer-factura", {
+        method: "POST",
+        body: fd,
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setErrorIA(json.error ?? "No se pudo leer la factura.");
+        return;
+      }
+
+      const datos = json as DatosFacturaExtraidos;
+      if (datos.fecha) setFecha(datos.fecha);
+      if (typeof datos.monto === "number") setMonto(String(datos.monto));
+      if (datos.numero_factura) setNumeroFactura(datos.numero_factura);
+
+      if (datos.proveedor) {
+        const nombreNormalizado = datos.proveedor.trim().toLowerCase();
+        const coincidencia = proveedores.find(
+          (p) => p.nombre.trim().toLowerCase() === nombreNormalizado,
+        );
+        if (coincidencia) {
+          setProveedorId(coincidencia.id);
+        } else {
+          setProveedorId(NUEVO);
+          setNuevoProveedorNombre(datos.proveedor);
+        }
+      }
+
+      setCompletadoPorIA(true);
+    } catch {
+      setErrorIA("No se pudo leer la factura.");
+    } finally {
+      setLeyendoIA(false);
+    }
+  }
 
   return (
     <form
@@ -80,6 +141,8 @@ function FacturaFormCampos({
               name="nuevo_proveedor_nombre"
               placeholder="Nombre del proveedor"
               required
+              value={nuevoProveedorNombre}
+              onChange={(e) => setNuevoProveedorNombre(e.target.value)}
               className={`${inputClass} mt-2`}
             />
           )}
@@ -134,7 +197,15 @@ function FacturaFormCampos({
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Campo label="Fecha" htmlFor="fecha">
-          <input id="fecha" name="fecha" type="date" required className={inputClass} />
+          <input
+            id="fecha"
+            name="fecha"
+            type="date"
+            required
+            value={fecha}
+            onChange={(e) => setFecha(e.target.value)}
+            className={inputClass}
+          />
         </Campo>
         <Campo label="Monto" htmlFor="monto">
           <input
@@ -144,6 +215,8 @@ function FacturaFormCampos({
             min="0"
             step="0.01"
             required
+            value={monto}
+            onChange={(e) => setMonto(e.target.value)}
             className={inputClass}
           />
         </Campo>
@@ -155,15 +228,43 @@ function FacturaFormCampos({
         </Campo>
       </div>
 
-      <Campo label="Soporte (PDF/imagen, opcional)" htmlFor="soporte">
-        <input
-          id="soporte"
-          name="soporte"
-          type="file"
-          accept="application/pdf,image/*"
-          className={`${inputClass} file:mr-3 file:rounded-md file:border-0 file:bg-amber-600 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white`}
-        />
-      </Campo>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Campo label="Número de factura (opcional)" htmlFor="numero_factura">
+          <input
+            id="numero_factura"
+            name="numero_factura"
+            value={numeroFactura}
+            onChange={(e) => setNumeroFactura(e.target.value)}
+            className={inputClass}
+          />
+        </Campo>
+
+        <Campo label="Factura (PDF/imagen, opcional)" htmlFor="soporte">
+          <input
+            id="soporte"
+            name="soporte"
+            type="file"
+            accept="application/pdf,image/jpeg,image/png,image/webp"
+            onChange={onArchivoChange}
+            className={`${inputClass} file:mr-3 file:rounded-md file:border-0 file:bg-amber-600 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white`}
+          />
+          {leyendoIA && (
+            <p className="mt-1.5 text-sm text-zinc-500 dark:text-zinc-400">
+              Leyendo factura con IA…
+            </p>
+          )}
+          {errorIA && (
+            <p className="mt-1.5 text-sm text-amber-600 dark:text-amber-400">
+              {errorIA} Puedes completar los datos manualmente.
+            </p>
+          )}
+          {completadoPorIA && !errorIA && (
+            <p className="mt-1.5 text-sm text-emerald-600 dark:text-emerald-400">
+              Datos completados automáticamente — revisa antes de guardar.
+            </p>
+          )}
+        </Campo>
+      </div>
 
       <Campo label="Notas (opcional)" htmlFor="notas">
         <textarea id="notas" name="notas" rows={2} className={inputClass} />

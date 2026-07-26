@@ -49,6 +49,7 @@ export default async function CostosPage() {
             <tr>
               <th className="px-4 py-3 font-medium">Fecha</th>
               <th className="px-4 py-3 font-medium">Proveedor</th>
+              <th className="px-4 py-3 font-medium">Nº factura</th>
               <th className="px-4 py-3 font-medium">Categoría</th>
               <th className="px-4 py-3 text-right font-medium">Monto</th>
               <th className="px-4 py-3 text-right font-medium">Saldo</th>
@@ -59,7 +60,7 @@ export default async function CostosPage() {
           <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
             {!facturas || facturas.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-zinc-500 dark:text-zinc-400">
+                <td colSpan={8} className="px-4 py-6 text-center text-zinc-500 dark:text-zinc-400">
                   Aún no hay facturas registradas.
                 </td>
               </tr>
@@ -71,6 +72,9 @@ export default async function CostosPage() {
                   </td>
                   <td className="px-4 py-3 text-zinc-600 dark:text-zinc-300">
                     {f.proveedor_nombre}
+                  </td>
+                  <td className="px-4 py-3 text-zinc-600 dark:text-zinc-300">
+                    {f.numero_factura ?? "—"}
                   </td>
                   <td className="px-4 py-3 text-zinc-600 dark:text-zinc-300">
                     {f.categoria_nombre}

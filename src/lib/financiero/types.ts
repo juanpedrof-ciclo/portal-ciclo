@@ -44,6 +44,7 @@ export type Factura = {
   monto: number;
   estado: EstadoFactura;
   soporte_url: string | null;
+  numero_factura: string | null;
   notas: string | null;
   created_at: string;
   creado_por: string | null;
@@ -105,6 +106,7 @@ export type VistaFacturaSaldo = {
   monto: number;
   estado: EstadoFactura;
   soporte_url: string | null;
+  numero_factura: string | null;
   notas: string | null;
   monto_aplicado: number;
   saldo_pendiente: number;

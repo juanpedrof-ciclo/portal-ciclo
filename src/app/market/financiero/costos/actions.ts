@@ -34,6 +34,7 @@ export async function crearFactura(
   const montoTexto = String(formData.get("monto") ?? "");
   const monto = Number(montoTexto);
   const estado = String(formData.get("estado") ?? "pendiente") as EstadoFactura;
+  const numeroFactura = String(formData.get("numero_factura") ?? "").trim() || null;
   const notas = String(formData.get("notas") ?? "").trim() || null;
   const soporte = formData.get("soporte");
 
@@ -88,6 +89,7 @@ export async function crearFactura(
     fecha,
     monto,
     estado,
+    numero_factura: numeroFactura,
     notas,
     soporte_url,
   });
