@@ -166,7 +166,7 @@ function PagoFormCampos({
                   : "text-zinc-500 dark:text-zinc-400"
               }`}
             >
-              Venta semanal manual
+              Venta manual
             </button>
           </div>
 
@@ -223,11 +223,11 @@ function PagoFormCampos({
                 <option value="" disabled>
                   {ingresosPendientes.length === 0
                     ? "No hay ventas pendientes de cobro"
-                    : "Selecciona una semana"}
+                    : "Selecciona una venta"}
                 </option>
                 {ingresosPendientes.map((i) => (
                   <option key={i.id} value={i.id}>
-                    Semana {formatFechaCorta(i.semana)} · saldo{" "}
+                    Venta del {formatFechaCorta(i.fecha)} · saldo{" "}
                     {formatCOP(i.saldo_pendiente)}
                   </option>
                 ))}

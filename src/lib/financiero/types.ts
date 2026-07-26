@@ -23,7 +23,7 @@ export type Categoria = {
 
 export type IngresoSemanal = {
   id: string;
-  semana: string;
+  fecha: string;
   monto_total: number;
   canal: Canal | null;
   origen: OrigenIngreso;
@@ -115,7 +115,7 @@ export type VistaFacturaSaldo = {
 
 export type VistaIngresoSaldo = {
   id: string;
-  semana: string;
+  fecha: string;
   monto_total: number;
   canal: Canal | null;
   origen: OrigenIngreso;
@@ -160,7 +160,6 @@ export type Pedido = {
   plataforma: string;
   id_orden_externo: string;
   fecha: string;
-  semana: string;
   canal: Canal | null;
   monto_total: number;
   estado: string | null;
@@ -181,7 +180,6 @@ export type VistaPedidoSaldo = {
   plataforma: string;
   id_orden_externo: string;
   fecha: string;
-  semana: string;
   canal: Canal | null;
   monto_total: number;
   estado: string | null;

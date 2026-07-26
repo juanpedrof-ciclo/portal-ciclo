@@ -45,6 +45,43 @@ export function ultimasSemanas(n: number, hoy = new Date()) {
   return rangos;
 }
 
+export function rangoSemanaActual(hoy = new Date()) {
+  const desde = inicioSemanaActual(hoy);
+  const hasta = new Date(`${desde}T00:00:00Z`);
+  hasta.setUTCDate(hasta.getUTCDate() + 6);
+  return { desde, hasta: toISODate(hasta) };
+}
+
+export function rangoAnioActual(hoy = new Date()) {
+  const desde = new Date(Date.UTC(hoy.getUTCFullYear(), 0, 1));
+  const hasta = new Date(Date.UTC(hoy.getUTCFullYear(), 11, 31));
+  return { desde: toISODate(desde), hasta: toISODate(hasta) };
+}
+
+export function semanasEnRango(desde: string, hasta: string) {
+  const rangos: { desde: string; hasta: string; etiqueta: string }[] = [];
+  let cursor = new Date(`${desde}T00:00:00Z`);
+  const fin = new Date(`${hasta}T00:00:00Z`);
+
+  while (cursor <= fin) {
+    const lunesSemana = new Date(`${inicioSemanaActual(cursor)}T00:00:00Z`);
+    const domingoSemana = new Date(lunesSemana);
+    domingoSemana.setUTCDate(domingoSemana.getUTCDate() + 6);
+    const finBucket = domingoSemana < fin ? domingoSemana : fin;
+
+    rangos.push({
+      desde: toISODate(cursor),
+      hasta: toISODate(finBucket),
+      etiqueta: toISODate(lunesSemana),
+    });
+
+    cursor = new Date(finBucket);
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+
+  return rangos;
+}
+
 export function ultimosMeses(n: number, hoy = new Date()) {
   const rangos: { desde: string; hasta: string; etiqueta: string }[] = [];
   for (let i = n - 1; i >= 0; i--) {

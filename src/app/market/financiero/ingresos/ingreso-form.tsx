@@ -105,10 +105,10 @@ function IngresoFormCampos({
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Campo label="Semana" htmlFor="semana">
+        <Campo label="Fecha" htmlFor="fecha">
           <input
-            id="semana"
-            name="semana"
+            id="fecha"
+            name="fecha"
             type="date"
             required
             className={inputClass}

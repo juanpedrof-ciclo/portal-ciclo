@@ -6,7 +6,6 @@ import { subirArchivo } from "@/lib/financiero/storage";
 import { obtenerOCrearCliente } from "@/lib/financiero/entidades";
 import { parseArchivoPedidos } from "@/lib/financiero/parse-pedidos";
 import { agruparPedidos } from "@/lib/financiero/agrupar-pedidos";
-import { inicioSemanaActual } from "@/lib/financiero/dates";
 import { recalcularIngresoPedidos } from "@/lib/financiero/recalcular-ingreso-pedidos";
 import type { Canal, MapeoColumnas } from "@/lib/financiero/types";
 
@@ -38,14 +37,14 @@ export async function procesarCargaVentas(
   const nombreFormato = String(formData.get("nombre_formato") ?? "").trim();
   const mapeoTexto = String(formData.get("mapeo") ?? "");
   const guardarFormato = formData.get("guardar_formato") === "on";
-  const semanaLote = String(formData.get("semana") ?? "");
+  const fechaLote = String(formData.get("fecha_lote") ?? "");
   const canal = (String(formData.get("canal") ?? "") || null) as Canal | null;
 
   if (!(archivo instanceof File) || archivo.size === 0) {
     return { error: "Selecciona un archivo." };
   }
   if (!nombreFormato) return { error: "Escribe un nombre para el formato (ej. Menú)." };
-  if (!semanaLote) return { error: "Selecciona la semana del lote." };
+  if (!fechaLote) return { error: "Selecciona la fecha del despacho/venta." };
 
   let mapeo: MapeoColumnas;
   try {
@@ -118,8 +117,7 @@ export async function procesarCargaVentas(
       return { error: err instanceof Error ? err.message : "No se pudo crear el cliente." };
     }
 
-    const fechaFila = fechaValida(pedido.fecha) ?? semanaLote;
-    const semanaFila = inicioSemanaActual(new Date(`${fechaFila}T00:00:00Z`));
+    const fechaFila = fechaValida(pedido.fecha) ?? fechaLote;
 
     filasPedidos.push({
       cliente_id,
@@ -127,7 +125,6 @@ export async function procesarCargaVentas(
       plataforma: nombreFormato,
       id_orden_externo: pedido.idOrdenExterno,
       fecha: fechaFila,
-      semana: semanaFila,
       canal,
       monto_total: pedido.montoTotal,
       estado: pedido.estado,
@@ -148,20 +145,20 @@ export async function procesarCargaVentas(
   }
 
   const advertencias: string[] = [];
-  const semanasCanalTocados = new Map<string, { semana: string; canal: Canal | null }>();
+  const fechasCanalTocados = new Map<string, { fecha: string; canal: Canal | null }>();
   for (const fila of filasPedidos) {
-    semanasCanalTocados.set(`${fila.semana}|${fila.canal ?? ""}`, {
-      semana: fila.semana,
+    fechasCanalTocados.set(`${fila.fecha}|${fila.canal ?? ""}`, {
+      fecha: fila.fecha,
       canal: fila.canal,
     });
   }
 
-  for (const { semana, canal: canalGrupo } of semanasCanalTocados.values()) {
+  for (const { fecha, canal: canalGrupo } of fechasCanalTocados.values()) {
     try {
-      await recalcularIngresoPedidos(supabase, semana, canalGrupo);
+      await recalcularIngresoPedidos(supabase, fecha, canalGrupo);
     } catch (err) {
       return {
-        error: `Los pedidos se guardaron, pero no se pudo actualizar el ingreso automático de la semana ${semana}: ${
+        error: `Los pedidos se guardaron, pero no se pudo actualizar el ingreso automático de la fecha ${fecha}: ${
           err instanceof Error ? err.message : "error desconocido"
         }. Revísalo manualmente en Ingresos.`,
       };
@@ -170,7 +167,7 @@ export async function procesarCargaVentas(
     let manualQuery = supabase
       .from("ingresos_semanales")
       .select("id")
-      .eq("semana", semana)
+      .eq("fecha", fecha)
       .in("origen", ["manual", "excel"]);
     manualQuery = canalGrupo
       ? manualQuery.eq("canal", canalGrupo)
@@ -178,7 +175,7 @@ export async function procesarCargaVentas(
     const { data: manualExistente } = await manualQuery.maybeSingle();
     if (manualExistente) {
       advertencias.push(
-        `La semana ${semana} ya tiene un ingreso manual/Excel además de los pedidos cargados. Revisa que no se esté contando dos veces.`,
+        `La fecha ${fecha} ya tiene un ingreso manual/Excel además de los pedidos cargados. Revisa que no se esté contando dos veces.`,
       );
     }
   }
@@ -206,7 +203,7 @@ export async function anularPedido(id: string): Promise<{ error: string | null }
 
   const { data: pedido } = await supabase
     .from("pedidos")
-    .select("semana, canal")
+    .select("fecha, canal")
     .eq("id", id)
     .single();
   if (!pedido) return { error: "El pedido ya no existe." };
@@ -234,10 +231,10 @@ export async function anularPedido(id: string): Promise<{ error: string | null }
   if (error) return { error: `No se pudo anular el pedido: ${error.message}` };
 
   try {
-    await recalcularIngresoPedidos(supabase, pedido.semana, pedido.canal);
+    await recalcularIngresoPedidos(supabase, pedido.fecha, pedido.canal);
   } catch (err) {
     return {
-      error: `El pedido se anuló, pero no se pudo actualizar el ingreso automático de la semana: ${
+      error: `El pedido se anuló, pero no se pudo actualizar el ingreso automático de la fecha: ${
         err instanceof Error ? err.message : "error desconocido"
       }. Revísalo manualmente en Ingresos.`,
     };

@@ -18,7 +18,7 @@ export default async function IngresosPage() {
     .from("ingresos_semanales")
     .select("*")
     .eq("anulado", false)
-    .order("semana", { ascending: false })
+    .order("fecha", { ascending: false })
     .limit(50)
     .returns<IngresoSemanal[]>();
 
@@ -29,7 +29,7 @@ export default async function IngresosPage() {
           Ingresos
         </h2>
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          Venta total de cada semana, a mano o tomada de un Excel.
+          Venta total por fecha, a mano o tomada de un Excel.
         </p>
       </div>
 
@@ -39,7 +39,7 @@ export default async function IngresosPage() {
         <table className="w-full text-left text-sm">
           <thead className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
             <tr>
-              <th className="px-4 py-3 font-medium">Semana</th>
+              <th className="px-4 py-3 font-medium">Fecha</th>
               <th className="px-4 py-3 font-medium">Canal</th>
               <th className="px-4 py-3 font-medium">Origen</th>
               <th className="px-4 py-3 text-right font-medium">Monto total</th>
@@ -58,7 +58,7 @@ export default async function IngresosPage() {
               ingresos.map((ingreso) => (
                 <tr key={ingreso.id}>
                   <td className="px-4 py-3 text-zinc-900 dark:text-zinc-100">
-                    {formatFechaCorta(ingreso.semana)}
+                    {formatFechaCorta(ingreso.fecha)}
                   </td>
                   <td className="px-4 py-3 text-zinc-600 dark:text-zinc-300">
                     {ingreso.canal ? CANAL_LABELS[ingreso.canal] : "—"}

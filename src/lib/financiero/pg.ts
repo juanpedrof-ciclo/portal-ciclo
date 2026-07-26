@@ -4,6 +4,7 @@ import type { TipoPL } from "./types";
 export type ResumenPG = {
   ingresos: number;
   costoProducto: number;
+  margenBruto: number;
   gastoVenta: number;
   gastoAdministrativo: number;
   utilidad: number;
@@ -19,8 +20,8 @@ export async function calcularPG(
       .from("ingresos_semanales")
       .select("monto_total")
       .eq("anulado", false)
-      .gte("semana", desde)
-      .lte("semana", hasta),
+      .gte("fecha", desde)
+      .lte("fecha", hasta),
     supabase
       .from("facturas")
       .select("monto, categorias(tipo_pl)")
@@ -50,6 +51,7 @@ export async function calcularPG(
   return {
     ingresos,
     costoProducto,
+    margenBruto: ingresos - costoProducto,
     gastoVenta,
     gastoAdministrativo,
     utilidad: ingresos - costoProducto - gastoVenta - gastoAdministrativo,

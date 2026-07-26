@@ -19,7 +19,7 @@ export default async function CuentasPorCobrarPage() {
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          Ventas semanales sin cobro cruzado (total o parcial).
+          Ventas sin cobro cruzado (total o parcial).
         </p>
         <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
           Total: {formatCOP(total)}
@@ -30,7 +30,7 @@ export default async function CuentasPorCobrarPage() {
         <table className="w-full text-left text-sm">
           <thead className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
             <tr>
-              <th className="px-4 py-3 font-medium">Semana</th>
+              <th className="px-4 py-3 font-medium">Fecha</th>
               <th className="px-4 py-3 font-medium">Canal</th>
               <th className="px-4 py-3 text-right font-medium">Saldo</th>
               <th className="px-4 py-3 text-right font-medium">Días de mora</th>
@@ -47,7 +47,7 @@ export default async function CuentasPorCobrarPage() {
               ingresos.map((i) => (
                 <tr key={i.id}>
                   <td className="px-4 py-3 text-zinc-900 dark:text-zinc-100">
-                    {formatFechaCorta(i.semana)}
+                    {formatFechaCorta(i.fecha)}
                   </td>
                   <td className="px-4 py-3 text-zinc-600 dark:text-zinc-300">
                     {i.canal ? CANAL_LABELS[i.canal] : "—"}

@@ -201,8 +201,14 @@ function CargaFormCampos({
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Campo label="Semana del lote" htmlFor="semana">
-              <input id="semana" name="semana" type="date" required className={inputClass} />
+            <Campo label="Fecha del despacho/venta" htmlFor="fecha_lote">
+              <input
+                id="fecha_lote"
+                name="fecha_lote"
+                type="date"
+                required
+                className={inputClass}
+              />
               <p className="mt-1.5 text-sm text-zinc-500 dark:text-zinc-400">
                 Se usa como respaldo si un pedido no trae fecha propia.
               </p>

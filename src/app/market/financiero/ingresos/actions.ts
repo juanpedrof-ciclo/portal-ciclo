@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { subirArchivo } from "@/lib/financiero/storage";
-import { inicioSemanaActual } from "@/lib/financiero/dates";
 import type { Canal, OrigenIngreso } from "@/lib/financiero/types";
 
 export type EstadoFormularioIngreso = { error: string | null; ts?: number } | null;
@@ -14,7 +13,7 @@ export async function crearIngreso(
 ): Promise<EstadoFormularioIngreso> {
   const supabase = await createClient();
 
-  const semanaInput = String(formData.get("semana") ?? "");
+  const fecha = String(formData.get("fecha") ?? "");
   const montoTexto = String(formData.get("monto_total") ?? "");
   const monto_total = Number(montoTexto);
   const canal = (String(formData.get("canal") ?? "") || null) as Canal | null;
@@ -23,26 +22,24 @@ export async function crearIngreso(
     "manual") as OrigenIngreso;
   const archivo = formData.get("archivo");
 
-  if (!semanaInput) return { error: "Selecciona la semana." };
+  if (!fecha) return { error: "Selecciona la fecha." };
   if (!montoTexto || Number.isNaN(monto_total) || monto_total < 0) {
     return { error: "Ingresa un monto total válido." };
   }
 
-  const semana = inicioSemanaActual(new Date(`${semanaInput}T00:00:00Z`));
-
-  let queryPedidosSemana = supabase
+  let queryPedidosFecha = supabase
     .from("ingresos_semanales")
     .select("id")
-    .eq("semana", semana)
+    .eq("fecha", fecha)
     .eq("origen", "pedidos");
-  queryPedidosSemana = canal
-    ? queryPedidosSemana.eq("canal", canal)
-    : queryPedidosSemana.is("canal", null);
-  const { data: existePorPedidos } = await queryPedidosSemana.maybeSingle();
+  queryPedidosFecha = canal
+    ? queryPedidosFecha.eq("canal", canal)
+    : queryPedidosFecha.is("canal", null);
+  const { data: existePorPedidos } = await queryPedidosFecha.maybeSingle();
   if (existePorPedidos) {
     return {
       error:
-        "Esta semana ya tiene ventas cargadas por archivo (Ventas). Edita los pedidos en vez de agregar un ingreso manual, para no contar la venta dos veces.",
+        "Esta fecha ya tiene ventas cargadas por archivo (Ventas). Edita los pedidos en vez de agregar un ingreso manual, para no contar la venta dos veces.",
     };
   }
 
@@ -62,7 +59,7 @@ export async function crearIngreso(
   }
 
   const { error } = await supabase.from("ingresos_semanales").insert({
-    semana,
+    fecha,
     monto_total,
     canal,
     notas,

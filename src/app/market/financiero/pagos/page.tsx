@@ -21,7 +21,7 @@ type PagoConAplicacion = {
   pago_aplicaciones: {
     monto_aplicado: number;
     facturas: { fecha: string; proveedores: { nombre: string } | null } | null;
-    ingresos_semanales: { semana: string } | null;
+    ingresos_semanales: { fecha: string } | null;
     pedidos: { fecha: string; clientes: { nombre: string } | null } | null;
   }[];
 };
@@ -45,7 +45,7 @@ export default async function PagosPage() {
       .from("vista_ingresos_saldo")
       .select("*")
       .gt("saldo_pendiente", 0)
-      .order("semana", { ascending: true })
+      .order("fecha", { ascending: true })
       .returns<VistaIngresoSaldo[]>(),
     supabase
       .from("vista_pedidos_saldo")
@@ -57,7 +57,7 @@ export default async function PagosPage() {
       .from("pagos")
       .select(
         `id, tipo, fecha, monto, destino, referencia,
-         pago_aplicaciones ( monto_aplicado, facturas ( fecha, proveedores ( nombre ) ), ingresos_semanales ( semana ), pedidos ( fecha, clientes ( nombre ) ) )`,
+         pago_aplicaciones ( monto_aplicado, facturas ( fecha, proveedores ( nombre ) ), ingresos_semanales ( fecha ), pedidos ( fecha, clientes ( nombre ) ) )`,
       )
       .eq("anulado", false)
       .order("fecha", { ascending: false })
@@ -108,7 +108,7 @@ export default async function PagosPage() {
                   aplicacion?.facturas != null
                     ? `${aplicacion.facturas.proveedores?.nombre ?? "Proveedor"} (${formatFechaCorta(aplicacion.facturas.fecha)})`
                     : aplicacion?.ingresos_semanales != null
-                      ? `Venta semana ${formatFechaCorta(aplicacion.ingresos_semanales.semana)}`
+                      ? `Venta del ${formatFechaCorta(aplicacion.ingresos_semanales.fecha)}`
                       : aplicacion?.pedidos != null
                         ? `${aplicacion.pedidos.clientes?.nombre ?? "Cliente"} (${formatFechaCorta(aplicacion.pedidos.fecha)})`
                         : "—";
