@@ -27,12 +27,20 @@ export default async function VentasPage() {
             cartera por cliente.
           </p>
         </div>
-        <Link
-          href="/market/financiero/clientes"
-          className="whitespace-nowrap text-sm font-medium text-amber-700 hover:underline dark:text-amber-400"
-        >
-          Ver clientes
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link
+            href="/market/financiero/ventas/formatos"
+            className="whitespace-nowrap text-sm font-medium text-amber-700 hover:underline dark:text-amber-400"
+          >
+            Gestionar formatos
+          </Link>
+          <Link
+            href="/market/financiero/clientes"
+            className="whitespace-nowrap text-sm font-medium text-amber-700 hover:underline dark:text-amber-400"
+          >
+            Ver clientes
+          </Link>
+        </div>
       </div>
 
       <CargaForm />

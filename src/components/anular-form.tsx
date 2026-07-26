@@ -7,10 +7,14 @@ export function AnularForm({
   id,
   action,
   mensaje,
+  label = "Anular",
+  pendingLabel = "Anulando…",
 }: {
   id: string;
   action: (id: string) => Promise<{ error: string | null }>;
   mensaje: string;
+  label?: string;
+  pendingLabel?: string;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -27,7 +31,7 @@ export function AnularForm({
         }}
       >
         <ConfirmSubmitButton mensaje={mensaje} disabled={pending}>
-          {pending ? "Anulando…" : "Anular"}
+          {pending ? pendingLabel : label}
         </ConfirmSubmitButton>
       </form>
       {error && (
