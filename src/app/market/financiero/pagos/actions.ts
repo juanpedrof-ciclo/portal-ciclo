@@ -113,10 +113,15 @@ export async function crearPago(
       .eq("id", facturaId)
       .single();
     if (actualizada && Number(actualizada.saldo_pendiente) <= 0) {
-      await supabase
+      const { error: errorEstado } = await supabase
         .from("facturas")
         .update({ estado: "pagado" })
         .eq("id", facturaId);
+      if (errorEstado) {
+        console.error(
+          `No se pudo marcar la factura ${facturaId} como pagada: ${errorEstado.message}`,
+        );
+      }
     }
   }
 
@@ -157,7 +162,15 @@ export async function anularPago(id: string): Promise<{ error: string | null }> 
       .eq("id", facturaId)
       .maybeSingle();
     if (vista && Number(vista.saldo_pendiente) > 0.01) {
-      await supabase.from("facturas").update({ estado: "pendiente" }).eq("id", facturaId);
+      const { error: errorEstado } = await supabase
+        .from("facturas")
+        .update({ estado: "pendiente" })
+        .eq("id", facturaId);
+      if (errorEstado) {
+        console.error(
+          `No se pudo revertir la factura ${facturaId} a pendiente: ${errorEstado.message}`,
+        );
+      }
     }
   }
 

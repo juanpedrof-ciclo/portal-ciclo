@@ -1,6 +1,6 @@
 export type TipoPL = "costo_producto" | "gasto_venta" | "gasto_administrativo";
 export type Canal = "hogar" | "horeca";
-export type OrigenIngreso = "manual" | "excel";
+export type OrigenIngreso = "manual" | "excel" | "pedidos";
 export type EstadoFactura = "pendiente" | "pagado";
 export type TipoPago = "pago_proveedor" | "cobro_cliente";
 export type DestinoPago = "banco" | "caja";
@@ -209,6 +209,12 @@ export const CATEGORIA_LABELS: Record<TipoPL, string> = {
 export const CANAL_LABELS: Record<Canal, string> = {
   hogar: "Hogar",
   horeca: "HORECA",
+};
+
+export const ORIGEN_INGRESO_LABELS: Record<OrigenIngreso, string> = {
+  manual: "Manual",
+  excel: "Excel",
+  pedidos: "Pedidos (automático)",
 };
 
 export function formatCOP(value: number): string {

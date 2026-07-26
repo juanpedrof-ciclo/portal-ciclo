@@ -43,10 +43,13 @@ export async function conciliarMovimiento(formData: FormData) {
 
   if (!movimientoId) return;
 
-  await supabase
+  const { error } = await supabase
     .from("movimientos_bancarios")
     .update({ pago_id: pagoId, conciliado: pagoId !== null })
     .eq("id", movimientoId);
+  if (error) {
+    console.error(`No se pudo conciliar el movimiento ${movimientoId}: ${error.message}`);
+  }
 
   revalidatePath("/market/financiero/resultados/conciliacion");
 }

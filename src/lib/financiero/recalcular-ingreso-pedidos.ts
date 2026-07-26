@@ -12,7 +12,10 @@ export async function recalcularIngresoPedidos(
     .eq("semana", semana)
     .eq("anulado", false);
   sumaQuery = canal ? sumaQuery.eq("canal", canal) : sumaQuery.is("canal", null);
-  const { data: pedidosSemana } = await sumaQuery;
+  const { data: pedidosSemana, error: errorSuma } = await sumaQuery;
+  if (errorSuma) {
+    throw new Error(`No se pudo calcular el ingreso de la semana: ${errorSuma.message}`);
+  }
   const sumaSemana = (pedidosSemana ?? []).reduce(
     (sum, p) => sum + Number(p.monto_total),
     0,
@@ -24,19 +27,30 @@ export async function recalcularIngresoPedidos(
     .eq("semana", semana)
     .eq("origen", "pedidos");
   ingresoQuery = canal ? ingresoQuery.eq("canal", canal) : ingresoQuery.is("canal", null);
-  const { data: ingresoExistente } = await ingresoQuery.maybeSingle();
+  const { data: ingresoExistente, error: errorConsulta } = await ingresoQuery.maybeSingle();
+  if (errorConsulta) {
+    throw new Error(
+      `No se pudo verificar el ingreso automático existente: ${errorConsulta.message}`,
+    );
+  }
 
   if (ingresoExistente) {
-    await supabase
+    const { error } = await supabase
       .from("ingresos_semanales")
       .update({ monto_total: sumaSemana })
       .eq("id", ingresoExistente.id);
+    if (error) {
+      throw new Error(`No se pudo actualizar el ingreso automático: ${error.message}`);
+    }
   } else {
-    await supabase.from("ingresos_semanales").insert({
+    const { error } = await supabase.from("ingresos_semanales").insert({
       semana,
       monto_total: sumaSemana,
       canal,
       origen: "pedidos",
     });
+    if (error) {
+      throw new Error(`No se pudo crear el ingreso automático: ${error.message}`);
+    }
   }
 }

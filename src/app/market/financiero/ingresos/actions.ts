@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { subirArchivo } from "@/lib/financiero/storage";
+import { inicioSemanaActual } from "@/lib/financiero/dates";
 import type { Canal, OrigenIngreso } from "@/lib/financiero/types";
 
 export type EstadoFormularioIngreso = { error: string | null; ts?: number } | null;
@@ -13,7 +14,7 @@ export async function crearIngreso(
 ): Promise<EstadoFormularioIngreso> {
   const supabase = await createClient();
 
-  const semana = String(formData.get("semana") ?? "");
+  const semanaInput = String(formData.get("semana") ?? "");
   const montoTexto = String(formData.get("monto_total") ?? "");
   const monto_total = Number(montoTexto);
   const canal = (String(formData.get("canal") ?? "") || null) as Canal | null;
@@ -22,10 +23,12 @@ export async function crearIngreso(
     "manual") as OrigenIngreso;
   const archivo = formData.get("archivo");
 
-  if (!semana) return { error: "Selecciona la semana." };
+  if (!semanaInput) return { error: "Selecciona la semana." };
   if (!montoTexto || Number.isNaN(monto_total) || monto_total < 0) {
     return { error: "Ingresa un monto total válido." };
   }
+
+  const semana = inicioSemanaActual(new Date(`${semanaInput}T00:00:00Z`));
 
   let queryPedidosSemana = supabase
     .from("ingresos_semanales")

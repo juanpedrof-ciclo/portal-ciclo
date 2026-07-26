@@ -3,7 +3,12 @@ import { IngresoForm } from "./ingreso-form";
 import { anularIngreso } from "./actions";
 import { AnularForm } from "@/components/anular-form";
 import type { IngresoSemanal } from "@/lib/financiero/types";
-import { CANAL_LABELS, formatCOP, formatFechaCorta } from "@/lib/financiero/types";
+import {
+  CANAL_LABELS,
+  ORIGEN_INGRESO_LABELS,
+  formatCOP,
+  formatFechaCorta,
+} from "@/lib/financiero/types";
 
 export const metadata = { title: "Ingresos · Módulo Financiero · Ciclo Market" };
 
@@ -59,7 +64,7 @@ export default async function IngresosPage() {
                     {ingreso.canal ? CANAL_LABELS[ingreso.canal] : "—"}
                   </td>
                   <td className="px-4 py-3 text-zinc-600 dark:text-zinc-300">
-                    {ingreso.origen === "excel" ? "Excel" : "Manual"}
+                    {ORIGEN_INGRESO_LABELS[ingreso.origen]}
                   </td>
                   <td className="px-4 py-3 text-right font-medium text-zinc-900 dark:text-zinc-100">
                     {formatCOP(ingreso.monto_total)}

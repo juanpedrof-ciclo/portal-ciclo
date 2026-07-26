@@ -157,7 +157,15 @@ export async function procesarCargaVentas(
   }
 
   for (const { semana, canal: canalGrupo } of semanasCanalTocados.values()) {
-    await recalcularIngresoPedidos(supabase, semana, canalGrupo);
+    try {
+      await recalcularIngresoPedidos(supabase, semana, canalGrupo);
+    } catch (err) {
+      return {
+        error: `Los pedidos se guardaron, pero no se pudo actualizar el ingreso automático de la semana ${semana}: ${
+          err instanceof Error ? err.message : "error desconocido"
+        }. Revísalo manualmente en Ingresos.`,
+      };
+    }
 
     let manualQuery = supabase
       .from("ingresos_semanales")
@@ -225,7 +233,15 @@ export async function anularPedido(id: string): Promise<{ error: string | null }
     .eq("id", id);
   if (error) return { error: `No se pudo anular el pedido: ${error.message}` };
 
-  await recalcularIngresoPedidos(supabase, pedido.semana, pedido.canal);
+  try {
+    await recalcularIngresoPedidos(supabase, pedido.semana, pedido.canal);
+  } catch (err) {
+    return {
+      error: `El pedido se anuló, pero no se pudo actualizar el ingreso automático de la semana: ${
+        err instanceof Error ? err.message : "error desconocido"
+      }. Revísalo manualmente en Ingresos.`,
+    };
+  }
 
   revalidatePath("/market/financiero/ventas");
   revalidatePath("/market/financiero/ingresos");
