@@ -1,7 +1,15 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { calcularPG, type ResumenPG } from "@/lib/financiero/pg";
 import {
+  desglosePorCategoria,
+  obtenerDatosPG,
+  resumirPG,
+  resumirPorBuckets,
+  type PuntoTendenciaPG,
+  type ResumenPG,
+} from "@/lib/financiero/pg";
+import {
+  mesesEnRango,
   rangoAnioActual,
   rangoMesActual,
   rangoSemanaActual,
@@ -10,6 +18,9 @@ import {
 } from "@/lib/financiero/dates";
 import { Campo, inputClass } from "@/components/form-field";
 import { formatCOP, formatFechaCorta } from "@/lib/financiero/types";
+import { DashboardPG } from "./dashboard-pg";
+
+const UMBRAL_SEMANAS_TENDENCIA = 13;
 
 export const metadata = { title: "P&G · Módulo Financiero · Ciclo Market" };
 
@@ -26,15 +37,42 @@ export default async function PGPage({
   const hasta = hastaParam || defecto.hasta;
 
   const supabase = await createClient();
-  const resumen = await calcularPG(supabase, desde, hasta);
+  const datos = await obtenerDatosPG(supabase, desde, hasta);
+  const resumen = resumirPG(datos);
+
   const semanas = semanasEnRango(desde, hasta);
-  const pgSemanas = await Promise.all(
-    semanas.map((rango) => calcularPG(supabase, rango.desde, rango.hasta)),
-  );
+  const pgSemanas = resumirPorBuckets(datos, semanas);
+
+  const granularidad: "semana" | "mes" =
+    semanas.length <= UMBRAL_SEMANAS_TENDENCIA ? "semana" : "mes";
+  const bucketsTendencia =
+    granularidad === "semana" ? semanas : mesesEnRango(desde, hasta);
+  const resumenTendencia =
+    granularidad === "semana" ? pgSemanas : resumirPorBuckets(datos, bucketsTendencia);
+  const tendencia: PuntoTendenciaPG[] = bucketsTendencia.map((bucket, i) => ({
+    etiqueta: bucket.etiqueta,
+    ingresos: resumenTendencia[i].ingresos,
+    costos:
+      resumenTendencia[i].costoProducto +
+      resumenTendencia[i].gastoVenta +
+      resumenTendencia[i].gastoAdministrativo,
+    utilidad: resumenTendencia[i].utilidad,
+  }));
+
+  const categorias = desglosePorCategoria(datos);
+  const hayDatos = datos.ingresos.length > 0 || datos.facturas.length > 0;
 
   return (
     <div className="flex flex-col gap-6">
       <RangoFechasSelector desde={desde} hasta={hasta} />
+
+      <DashboardPG
+        resumen={resumen}
+        tendencia={tendencia}
+        granularidad={granularidad}
+        categorias={categorias}
+        hayDatos={hayDatos}
+      />
 
       <TablaPG
         titulo={`P&G del ${formatFechaCorta(desde)} al ${formatFechaCorta(hasta)}`}

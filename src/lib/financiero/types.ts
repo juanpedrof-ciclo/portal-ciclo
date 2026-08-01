@@ -231,3 +231,23 @@ export function formatFechaCorta(value: string): string {
     timeZone: "UTC",
   }).format(new Date(value));
 }
+
+export function formatPorcentaje(value: number): string {
+  return new Intl.NumberFormat("es-CO", {
+    style: "percent",
+    maximumFractionDigits: 1,
+  }).format(value);
+}
+
+export function formatCOPCompacto(value: number): string {
+  const signo = value < 0 ? "-" : "";
+  const abs = Math.abs(value);
+
+  if (abs >= 1_000_000) {
+    return `${signo}$${(abs / 1_000_000).toFixed(1).replace(".", ",")}M`;
+  }
+  if (abs >= 1_000) {
+    return `${signo}$${(abs / 1_000).toFixed(0)}K`;
+  }
+  return `${signo}$${abs}`;
+}

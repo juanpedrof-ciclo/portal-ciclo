@@ -3,6 +3,19 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  --chart-ingresos: #2a78d6;
+  --chart-costos: #eb6834;
+  --chart-utilidad: #1baf7a;
+  --chart-costo-producto: #e87ba4;
+  --chart-gasto-venta: #eda100;
+  --chart-gasto-administrativo: #4a3aa7;
+  --chart-otros: #898781;
+  --chart-grid: #e4e4e7;
+  --chart-axis: #71717a;
+  --chart-tooltip-bg: #ffffff;
+  --chart-tooltip-border: #e4e4e7;
+  --chart-tooltip-text: #18181b;
 }
 
 @theme inline {
@@ -16,6 +29,19 @@
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+
+    --chart-ingresos: #3987e5;
+    --chart-costos: #d95926;
+    --chart-utilidad: #199e70;
+    --chart-costo-producto: #d55181;
+    --chart-gasto-venta: #c98500;
+    --chart-gasto-administrativo: #9085e9;
+    --chart-otros: #898781;
+    --chart-grid: #27272a;
+    --chart-axis: #a1a1aa;
+    --chart-tooltip-bg: #18181b;
+    --chart-tooltip-border: #27272a;
+    --chart-tooltip-text: #fafafa;
   }
 }
 

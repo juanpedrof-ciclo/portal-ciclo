@@ -82,6 +82,33 @@ export function semanasEnRango(desde: string, hasta: string) {
   return rangos;
 }
 
+export function mesesEnRango(desde: string, hasta: string) {
+  const rangos: { desde: string; hasta: string; etiqueta: string }[] = [];
+  let cursor = new Date(`${desde}T00:00:00Z`);
+  const fin = new Date(`${hasta}T00:00:00Z`);
+
+  while (cursor <= fin) {
+    const inicioMes = new Date(
+      Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth(), 1),
+    );
+    const finMes = new Date(
+      Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth() + 1, 0),
+    );
+    const finBucket = finMes < fin ? finMes : fin;
+
+    rangos.push({
+      desde: toISODate(cursor),
+      hasta: toISODate(finBucket),
+      etiqueta: toISODate(inicioMes),
+    });
+
+    cursor = new Date(finBucket);
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+
+  return rangos;
+}
+
 export function ultimosMeses(n: number, hoy = new Date()) {
   const rangos: { desde: string; hasta: string; etiqueta: string }[] = [];
   for (let i = n - 1; i >= 0; i--) {
