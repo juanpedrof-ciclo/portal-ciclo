@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { crearFactura, type EstadoFormularioFactura } from "./actions";
 import { Campo, inputClass } from "@/components/form-field";
 import { CATEGORIA_LABELS } from "@/lib/financiero/types";
@@ -27,7 +27,7 @@ export function FacturaForm({
     FormData
   >(crearFactura, null);
 
-  const resetKey = state && state.error === null ? state.ts : 0;
+  const resetKey = state?.ts ? state.ts : 0;
 
   return (
     <FacturaFormCampos
@@ -35,6 +35,7 @@ export function FacturaForm({
       formAction={formAction}
       isPending={isPending}
       error={state?.error ?? null}
+      advertenciaDuplicado={state?.advertenciaDuplicado ?? null}
       proveedores={proveedores}
       categorias={categorias}
     />
@@ -45,15 +46,19 @@ function FacturaFormCampos({
   formAction,
   isPending,
   error,
+  advertenciaDuplicado,
   proveedores,
   categorias,
 }: {
   formAction: (formData: FormData) => void;
   isPending: boolean;
   error: string | null;
+  advertenciaDuplicado: string | null;
   proveedores: Proveedor[];
   categorias: Categoria[];
 }) {
+  const formRef = useRef<HTMLFormElement>(null);
+  const [forzarGuardado, setForzarGuardado] = useState(false);
   const [proveedorId, setProveedorId] = useState("");
   const [nuevoProveedorNombre, setNuevoProveedorNombre] = useState("");
   const [categoriaId, setCategoriaId] = useState("");
@@ -113,9 +118,12 @@ function FacturaFormCampos({
 
   return (
     <form
+      ref={formRef}
       action={formAction}
       className="flex flex-col gap-4 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
     >
+      <input type="hidden" name="forzar_guardado" value={forzarGuardado ? "true" : "false"} />
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Campo label="Proveedor" htmlFor="proveedor_id">
           <select
@@ -234,7 +242,10 @@ function FacturaFormCampos({
             id="numero_factura"
             name="numero_factura"
             value={numeroFactura}
-            onChange={(e) => setNumeroFactura(e.target.value)}
+            onChange={(e) => {
+              setNumeroFactura(e.target.value);
+              setForzarGuardado(false);
+            }}
             className={inputClass}
           />
         </Campo>
@@ -271,6 +282,23 @@ function FacturaFormCampos({
       </Campo>
 
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+
+      {advertenciaDuplicado && (
+        <div className="flex flex-col gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+          <p>{advertenciaDuplicado}</p>
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={() => {
+              setForzarGuardado(true);
+              requestAnimationFrame(() => formRef.current?.requestSubmit());
+            }}
+            className="inline-flex w-fit items-center justify-center rounded-lg border border-amber-600 px-3 py-1.5 text-sm font-medium text-amber-800 transition hover:bg-amber-100 disabled:opacity-60 dark:text-amber-300 dark:hover:bg-amber-900/40"
+          >
+            Guardar de todos modos
+          </button>
+        </div>
+      )}
 
       <button
         type="submit"

@@ -8,8 +8,13 @@ import {
   obtenerOCrearProveedor,
 } from "@/lib/financiero/entidades";
 import type { EstadoFactura, TipoPL } from "@/lib/financiero/types";
+import { formatFechaCorta } from "@/lib/financiero/types";
 
-export type EstadoFormularioFactura = { error: string | null; ts?: number } | null;
+export type EstadoFormularioFactura = {
+  error: string | null;
+  ts?: number;
+  advertenciaDuplicado?: string | null;
+} | null;
 
 const NUEVO = "__nuevo__";
 
@@ -70,6 +75,23 @@ export async function crearFactura(
     }
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Error inesperado." };
+  }
+
+  const forzarGuardado = String(formData.get("forzar_guardado") ?? "") === "true";
+  if (numeroFactura && !forzarGuardado) {
+    const { data: duplicado } = await supabase
+      .from("facturas")
+      .select("fecha")
+      .eq("proveedor_id", proveedor_id)
+      .eq("numero_factura", numeroFactura)
+      .eq("anulado", false)
+      .maybeSingle();
+    if (duplicado) {
+      return {
+        error: null,
+        advertenciaDuplicado: `Ya existe una factura de este proveedor con el número ${numeroFactura}, registrada el ${formatFechaCorta(duplicado.fecha)}.`,
+      };
+    }
   }
 
   let soporte_url: string | null = null;
