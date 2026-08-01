@@ -9,6 +9,7 @@ import {
 } from "@/lib/financiero/entidades";
 import type { EstadoFactura, TipoPL } from "@/lib/financiero/types";
 import { formatFechaCorta } from "@/lib/financiero/types";
+import type { ResultadoAnulacionLote } from "@/lib/financiero/anulacion-lote";
 
 export type EstadoFormularioFactura = {
   error: string | null;
@@ -157,4 +158,68 @@ export async function anularFactura(id: string): Promise<{ error: string | null 
   revalidatePath("/market/financiero/pagos");
 
   return { error: null };
+}
+
+export async function anularFacturasLote(ids: string[]): Promise<ResultadoAnulacionLote> {
+  if (ids.length === 0) return { anulados: 0, bloqueados: [] };
+  const supabase = await createClient();
+
+  const { data: facturas } = await supabase
+    .from("facturas")
+    .select("id, fecha, numero_factura")
+    .in("id", ids);
+
+  const { data: vistas } = await supabase
+    .from("vista_facturas_saldo")
+    .select("id, monto_aplicado")
+    .in("id", ids);
+  const montoAplicadoPorId = new Map(
+    (vistas ?? []).map((v) => [v.id, Number(v.monto_aplicado)]),
+  );
+
+  const bloqueados: { id: string; referencia: string; motivo: string }[] = [];
+  const anulables: string[] = [];
+
+  for (const f of facturas ?? []) {
+    const referencia = `Factura ${f.numero_factura ?? "sin número"} (${formatFechaCorta(f.fecha)})`;
+    const montoAplicado = montoAplicadoPorId.get(f.id) ?? 0;
+    if (montoAplicado > 0.01) {
+      bloqueados.push({ id: f.id, referencia, motivo: "tiene un pago cruzado" });
+    } else {
+      anulables.push(f.id);
+    }
+  }
+
+  if (anulables.length === 0) return { anulados: 0, bloqueados };
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { error } = await supabase
+    .from("facturas")
+    .update({ anulado: true, anulado_at: new Date().toISOString(), anulado_por: user?.id ?? null })
+    .in("id", anulables);
+
+  if (error) {
+    return {
+      anulados: 0,
+      bloqueados: [
+        ...bloqueados,
+        ...anulables.map((id) => ({
+          id,
+          referencia: `Factura ${id}`,
+          motivo: `error al anular: ${error.message}`,
+        })),
+      ],
+    };
+  }
+
+  revalidatePath("/market/financiero/costos");
+  revalidatePath("/market/financiero");
+  revalidatePath("/market/financiero/resultados/pg");
+  revalidatePath("/market/financiero/resultados/cuentas-por-pagar");
+  revalidatePath("/market/financiero/pagos");
+
+  return { anulados: anulables.length, bloqueados };
 }

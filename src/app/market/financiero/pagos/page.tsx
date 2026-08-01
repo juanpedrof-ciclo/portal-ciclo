@@ -1,7 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { PagoForm } from "./pago-form";
-import { anularPago } from "./actions";
+import { anularPago, anularPagosLote } from "./actions";
 import { AnularForm } from "@/components/anular-form";
+import { SeleccionProvider } from "@/components/seleccion-provider";
+import { CheckboxFila, CheckboxTodo } from "@/components/checkbox-seleccion";
+import { AnularSeleccionadosBar } from "@/components/anular-seleccionados-bar";
 import type {
   VistaFacturaSaldo,
   VistaIngresoSaldo,
@@ -65,6 +68,8 @@ export default async function PagosPage() {
       .returns<PagoConAplicacion[]>(),
   ]);
 
+  const idsVisibles = (pagos ?? []).map((p) => p.id);
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -82,65 +87,75 @@ export default async function PagosPage() {
         pedidosPendientes={pedidosPendientes ?? []}
       />
 
-      <div className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
-            <tr>
-              <th className="px-4 py-3 font-medium">Fecha</th>
-              <th className="px-4 py-3 font-medium">Tipo</th>
-              <th className="px-4 py-3 font-medium">Aplica a</th>
-              <th className="px-4 py-3 text-right font-medium">Monto</th>
-              <th className="px-4 py-3 font-medium">Destino</th>
-              <th className="px-4 py-3 font-medium">Acciones</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-            {!pagos || pagos.length === 0 ? (
+      <SeleccionProvider idsVisibles={idsVisibles}>
+        <AnularSeleccionadosBar idsVisibles={idsVisibles} action={anularPagosLote} />
+
+        <div className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <table className="w-full text-left text-sm">
+            <thead className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-zinc-500 dark:text-zinc-400">
-                  Aún no hay recibos de pago registrados.
-                </td>
+                <th className="w-10 px-4 py-3">
+                  <CheckboxTodo ids={idsVisibles} />
+                </th>
+                <th className="px-4 py-3 font-medium">Fecha</th>
+                <th className="px-4 py-3 font-medium">Tipo</th>
+                <th className="px-4 py-3 font-medium">Aplica a</th>
+                <th className="px-4 py-3 text-right font-medium">Monto</th>
+                <th className="px-4 py-3 font-medium">Destino</th>
+                <th className="px-4 py-3 font-medium">Acciones</th>
               </tr>
-            ) : (
-              pagos.map((pago) => {
-                const aplicacion = pago.pago_aplicaciones[0];
-                const destino =
-                  aplicacion?.facturas != null
-                    ? `${aplicacion.facturas.proveedores?.nombre ?? "Proveedor"} (${formatFechaCorta(aplicacion.facturas.fecha)})`
-                    : aplicacion?.ingresos_semanales != null
-                      ? `Venta del ${formatFechaCorta(aplicacion.ingresos_semanales.fecha)}`
-                      : aplicacion?.pedidos != null
-                        ? `${aplicacion.pedidos.clientes?.nombre ?? "Cliente"} (${formatFechaCorta(aplicacion.pedidos.fecha)})`
-                        : "—";
-                return (
-                  <tr key={pago.id}>
-                    <td className="px-4 py-3 text-zinc-900 dark:text-zinc-100">
-                      {formatFechaCorta(pago.fecha)}
-                    </td>
-                    <td className="px-4 py-3 text-zinc-600 dark:text-zinc-300">
-                      {pago.tipo === "pago_proveedor" ? "Pago a proveedor" : "Cobro de cliente"}
-                    </td>
-                    <td className="px-4 py-3 text-zinc-600 dark:text-zinc-300">{destino}</td>
-                    <td className="px-4 py-3 text-right font-medium text-zinc-900 dark:text-zinc-100">
-                      {formatCOP(pago.monto)}
-                    </td>
-                    <td className="px-4 py-3 text-zinc-600 dark:text-zinc-300">
-                      {pago.destino === "banco" ? "Banco" : "Caja / efectivo"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <AnularForm
-                        id={pago.id}
-                        action={anularPago}
-                        mensaje="¿Seguro que deseas anular este pago? Esta acción lo excluye de tus cálculos y libera el saldo de la factura o venta que cruzaba."
-                      />
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+              {!pagos || pagos.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-6 text-center text-zinc-500 dark:text-zinc-400">
+                    Aún no hay recibos de pago registrados.
+                  </td>
+                </tr>
+              ) : (
+                pagos.map((pago) => {
+                  const aplicacion = pago.pago_aplicaciones[0];
+                  const destino =
+                    aplicacion?.facturas != null
+                      ? `${aplicacion.facturas.proveedores?.nombre ?? "Proveedor"} (${formatFechaCorta(aplicacion.facturas.fecha)})`
+                      : aplicacion?.ingresos_semanales != null
+                        ? `Venta del ${formatFechaCorta(aplicacion.ingresos_semanales.fecha)}`
+                        : aplicacion?.pedidos != null
+                          ? `${aplicacion.pedidos.clientes?.nombre ?? "Cliente"} (${formatFechaCorta(aplicacion.pedidos.fecha)})`
+                          : "—";
+                  return (
+                    <tr key={pago.id}>
+                      <td className="px-4 py-3">
+                        <CheckboxFila id={pago.id} />
+                      </td>
+                      <td className="px-4 py-3 text-zinc-900 dark:text-zinc-100">
+                        {formatFechaCorta(pago.fecha)}
+                      </td>
+                      <td className="px-4 py-3 text-zinc-600 dark:text-zinc-300">
+                        {pago.tipo === "pago_proveedor" ? "Pago a proveedor" : "Cobro de cliente"}
+                      </td>
+                      <td className="px-4 py-3 text-zinc-600 dark:text-zinc-300">{destino}</td>
+                      <td className="px-4 py-3 text-right font-medium text-zinc-900 dark:text-zinc-100">
+                        {formatCOP(pago.monto)}
+                      </td>
+                      <td className="px-4 py-3 text-zinc-600 dark:text-zinc-300">
+                        {pago.destino === "banco" ? "Banco" : "Caja / efectivo"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <AnularForm
+                          id={pago.id}
+                          action={anularPago}
+                          mensaje="¿Seguro que deseas anular este pago? Esta acción lo excluye de tus cálculos y libera el saldo de la factura o venta que cruzaba."
+                        />
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </SeleccionProvider>
     </div>
   );
 }

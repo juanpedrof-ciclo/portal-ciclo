@@ -8,6 +8,8 @@ import { parseArchivoPedidos } from "@/lib/financiero/parse-pedidos";
 import { agruparPedidos } from "@/lib/financiero/agrupar-pedidos";
 import { recalcularIngresoPedidos } from "@/lib/financiero/recalcular-ingreso-pedidos";
 import type { Canal, MapeoColumnas } from "@/lib/financiero/types";
+import { formatFechaCorta } from "@/lib/financiero/types";
+import type { ResultadoAnulacionLote } from "@/lib/financiero/anulacion-lote";
 
 export type ResumenCarga = {
   pedidos: number;
@@ -249,4 +251,95 @@ export async function anularPedido(id: string): Promise<{ error: string | null }
   revalidatePath("/market/financiero/pagos");
 
   return { error: null };
+}
+
+export async function anularPedidosLote(ids: string[]): Promise<ResultadoAnulacionLote> {
+  if (ids.length === 0) return { anulados: 0, bloqueados: [] };
+  const supabase = await createClient();
+
+  const { data: pedidos } = await supabase
+    .from("pedidos")
+    .select("id, fecha, canal, id_orden_externo")
+    .in("id", ids);
+
+  const { data: vistas } = await supabase
+    .from("vista_pedidos_saldo")
+    .select("id, monto_aplicado")
+    .in("id", ids);
+  const montoAplicadoPorId = new Map(
+    (vistas ?? []).map((v) => [v.id, Number(v.monto_aplicado)]),
+  );
+
+  const bloqueados: { id: string; referencia: string; motivo: string }[] = [];
+  const anulables: { id: string; fecha: string; canal: Canal | null }[] = [];
+
+  for (const p of pedidos ?? []) {
+    const referencia = `Pedido ${p.id_orden_externo} (${formatFechaCorta(p.fecha)})`;
+    const montoAplicado = montoAplicadoPorId.get(p.id) ?? 0;
+    if (montoAplicado > 0.01) {
+      bloqueados.push({ id: p.id, referencia, motivo: "tiene un pago cruzado" });
+    } else {
+      anulables.push({ id: p.id, fecha: p.fecha, canal: p.canal });
+    }
+  }
+
+  if (anulables.length === 0) return { anulados: 0, bloqueados };
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { error } = await supabase
+    .from("pedidos")
+    .update({ anulado: true, anulado_at: new Date().toISOString(), anulado_por: user?.id ?? null })
+    .in(
+      "id",
+      anulables.map((p) => p.id),
+    );
+
+  if (error) {
+    return {
+      anulados: 0,
+      bloqueados: [
+        ...bloqueados,
+        ...anulables.map((p) => ({
+          id: p.id,
+          referencia: `Pedido del ${formatFechaCorta(p.fecha)}`,
+          motivo: `error al anular: ${error.message}`,
+        })),
+      ],
+    };
+  }
+
+  const combos = new Map<string, { fecha: string; canal: Canal | null }>();
+  for (const p of anulables) {
+    combos.set(`${p.fecha}|${p.canal ?? ""}`, { fecha: p.fecha, canal: p.canal });
+  }
+
+  const advertencias: string[] = [];
+  for (const { fecha, canal } of combos.values()) {
+    try {
+      await recalcularIngresoPedidos(supabase, fecha, canal);
+    } catch (err) {
+      advertencias.push(
+        `No se pudo actualizar el ingreso automático del ${formatFechaCorta(fecha)}: ${
+          err instanceof Error ? err.message : "error desconocido"
+        }. Revísalo manualmente en Ingresos.`,
+      );
+    }
+  }
+
+  revalidatePath("/market/financiero/ventas");
+  revalidatePath("/market/financiero/ingresos");
+  revalidatePath("/market/financiero");
+  revalidatePath("/market/financiero/resultados/pg");
+  revalidatePath("/market/financiero/resultados/cartera-clientes");
+  revalidatePath("/market/financiero/resultados/cuentas-por-cobrar");
+  revalidatePath("/market/financiero/pagos");
+
+  return {
+    anulados: anulables.length,
+    bloqueados,
+    advertencias: advertencias.length ? advertencias : undefined,
+  };
 }

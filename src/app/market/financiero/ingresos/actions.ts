@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { subirArchivo } from "@/lib/financiero/storage";
 import type { Canal, OrigenIngreso } from "@/lib/financiero/types";
+import { formatFechaCorta } from "@/lib/financiero/types";
+import type { ResultadoAnulacionLote } from "@/lib/financiero/anulacion-lote";
 
 export type EstadoFormularioIngreso = { error: string | null; ts?: number } | null;
 
@@ -108,4 +110,68 @@ export async function anularIngreso(id: string): Promise<{ error: string | null 
   revalidatePath("/market/financiero/pagos");
 
   return { error: null };
+}
+
+export async function anularIngresosLote(ids: string[]): Promise<ResultadoAnulacionLote> {
+  if (ids.length === 0) return { anulados: 0, bloqueados: [] };
+  const supabase = await createClient();
+
+  const { data: ingresos } = await supabase
+    .from("ingresos_semanales")
+    .select("id, fecha")
+    .in("id", ids);
+
+  const { data: vistas } = await supabase
+    .from("vista_ingresos_saldo")
+    .select("id, monto_aplicado")
+    .in("id", ids);
+  const montoAplicadoPorId = new Map(
+    (vistas ?? []).map((v) => [v.id, Number(v.monto_aplicado)]),
+  );
+
+  const bloqueados: { id: string; referencia: string; motivo: string }[] = [];
+  const anulables: string[] = [];
+
+  for (const ingreso of ingresos ?? []) {
+    const referencia = `Ingreso del ${formatFechaCorta(ingreso.fecha)}`;
+    const montoAplicado = montoAplicadoPorId.get(ingreso.id) ?? 0;
+    if (montoAplicado > 0.01) {
+      bloqueados.push({ id: ingreso.id, referencia, motivo: "tiene un cobro cruzado" });
+    } else {
+      anulables.push(ingreso.id);
+    }
+  }
+
+  if (anulables.length === 0) return { anulados: 0, bloqueados };
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { error } = await supabase
+    .from("ingresos_semanales")
+    .update({ anulado: true, anulado_at: new Date().toISOString(), anulado_por: user?.id ?? null })
+    .in("id", anulables);
+
+  if (error) {
+    return {
+      anulados: 0,
+      bloqueados: [
+        ...bloqueados,
+        ...anulables.map((id) => ({
+          id,
+          referencia: `Ingreso ${id}`,
+          motivo: `error al anular: ${error.message}`,
+        })),
+      ],
+    };
+  }
+
+  revalidatePath("/market/financiero/ingresos");
+  revalidatePath("/market/financiero");
+  revalidatePath("/market/financiero/resultados/pg");
+  revalidatePath("/market/financiero/resultados/cuentas-por-cobrar");
+  revalidatePath("/market/financiero/pagos");
+
+  return { anulados: anulables.length, bloqueados };
 }

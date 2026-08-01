@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { DestinoPago, TipoPago } from "@/lib/financiero/types";
+import type { ResultadoAnulacionLote } from "@/lib/financiero/anulacion-lote";
 
 export type EstadoFormularioPago = { error: string | null; ts?: number } | null;
 
@@ -185,4 +186,69 @@ export async function anularPago(id: string): Promise<{ error: string | null }> 
   revalidatePath("/market/financiero/ventas");
 
   return { error: null };
+}
+
+export async function anularPagosLote(ids: string[]): Promise<ResultadoAnulacionLote> {
+  if (ids.length === 0) return { anulados: 0, bloqueados: [] };
+  const supabase = await createClient();
+
+  const { data: aplicaciones } = await supabase
+    .from("pago_aplicaciones")
+    .select("pago_id, factura_id")
+    .in("pago_id", ids)
+    .not("factura_id", "is", null);
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { error } = await supabase
+    .from("pagos")
+    .update({ anulado: true, anulado_at: new Date().toISOString(), anulado_por: user?.id ?? null })
+    .in("id", ids);
+
+  if (error) {
+    return {
+      anulados: 0,
+      bloqueados: ids.map((id) => ({
+        id,
+        referencia: `Pago ${id}`,
+        motivo: `error al anular: ${error.message}`,
+      })),
+    };
+  }
+
+  const facturaIds = new Set(
+    (aplicaciones ?? []).map((a) => a.factura_id as string),
+  );
+  for (const facturaId of facturaIds) {
+    const { data: vista } = await supabase
+      .from("vista_facturas_saldo")
+      .select("saldo_pendiente")
+      .eq("id", facturaId)
+      .maybeSingle();
+    if (vista && Number(vista.saldo_pendiente) > 0.01) {
+      const { error: errorEstado } = await supabase
+        .from("facturas")
+        .update({ estado: "pendiente" })
+        .eq("id", facturaId);
+      if (errorEstado) {
+        console.error(
+          `No se pudo revertir la factura ${facturaId} a pendiente: ${errorEstado.message}`,
+        );
+      }
+    }
+  }
+
+  revalidatePath("/market/financiero/pagos");
+  revalidatePath("/market/financiero/costos");
+  revalidatePath("/market/financiero");
+  revalidatePath("/market/financiero/resultados/pg");
+  revalidatePath("/market/financiero/resultados/cuentas-por-pagar");
+  revalidatePath("/market/financiero/resultados/cuentas-por-cobrar");
+  revalidatePath("/market/financiero/resultados/cartera-clientes");
+  revalidatePath("/market/financiero/resultados/conciliacion");
+  revalidatePath("/market/financiero/ventas");
+
+  return { anulados: ids.length, bloqueados: [] };
 }
