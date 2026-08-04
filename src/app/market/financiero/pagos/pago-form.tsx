@@ -3,7 +3,7 @@
 import { useActionState, useMemo, useState } from "react";
 import { crearPago, type EstadoFormularioPago } from "./actions";
 import { Campo, inputClass } from "@/components/form-field";
-import { formatCOP, formatFechaCorta } from "@/lib/financiero/types";
+import { DESTINO_PAGO_LABELS, formatCOP, formatFechaCorta } from "@/lib/financiero/types";
 import type {
   VistaFacturaSaldo,
   VistaIngresoSaldo,
@@ -261,8 +261,11 @@ function PagoFormCampos({
         </Campo>
         <Campo label="Destino del dinero" htmlFor="destino">
           <select id="destino" name="destino" defaultValue="banco" className={inputClass}>
-            <option value="banco">Banco</option>
-            <option value="caja">Caja / efectivo</option>
+            {Object.entries(DESTINO_PAGO_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
           </select>
         </Campo>
       </div>

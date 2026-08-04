@@ -1,7 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { MovimientoForm } from "./movimiento-form";
 import { conciliarMovimiento } from "./actions";
-import { formatCOP, formatFechaCorta } from "@/lib/financiero/types";
+import {
+  formatCOP,
+  formatFechaCorta,
+  type VistaSaldoBancoCaja,
+} from "@/lib/financiero/types";
 
 export const metadata = {
   title: "Conciliación bancaria · Módulo Financiero · Ciclo Market",
@@ -29,7 +33,7 @@ type PagoBanco = {
 export default async function ConciliacionPage() {
   const supabase = await createClient();
 
-  const [{ data: movimientos }, { data: pagosBanco }, { data: pagosCaja }] =
+  const [{ data: movimientos }, { data: pagosBanco }, { data: saldos }] =
     await Promise.all([
       supabase
         .from("movimientos_bancarios")
@@ -46,28 +50,43 @@ export default async function ConciliacionPage() {
         .order("fecha", { ascending: false })
         .returns<PagoBanco[]>(),
       supabase
-        .from("pagos")
-        .select("tipo, monto")
-        .eq("destino", "caja")
-        .eq("anulado", false),
+        .from("vista_saldo_banco_caja")
+        .select("destino, saldo_actual")
+        .returns<Pick<VistaSaldoBancoCaja, "destino" | "saldo_actual">[]>(),
     ]);
 
-  const saldoCaja = (pagosCaja ?? []).reduce((saldo, p) => {
-    return p.tipo === "cobro_cliente" ? saldo + Number(p.monto) : saldo - Number(p.monto);
-  }, 0);
+  const saldoBanco = (saldos ?? []).find((s) => s.destino === "banco")?.saldo_actual ?? 0;
+  const saldoCaja = (saldos ?? []).find((s) => s.destino === "caja")?.saldo_actual ?? 0;
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-          Saldo de caja (efectivo)
-        </p>
-        <p className="mt-1 text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
-          {formatCOP(saldoCaja)}
-        </p>
-        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-          Cobros de cliente en caja menos pagos a proveedor en caja.
-        </p>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+            Saldo de banco
+          </p>
+          <p className="mt-1 text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
+            {formatCOP(saldoBanco)}
+          </p>
+          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+            Saldo inicial + pagos en banco + ajustes. Se configura en{" "}
+            <a href="/market/financiero/resultados/banco-caja" className="underline">
+              Banco y caja
+            </a>
+            .
+          </p>
+        </div>
+        <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+            Saldo de caja (efectivo)
+          </p>
+          <p className="mt-1 text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
+            {formatCOP(saldoCaja)}
+          </p>
+          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+            Saldo inicial + pagos en caja + ajustes.
+          </p>
+        </div>
       </div>
 
       <MovimientoForm />

@@ -3,7 +3,8 @@ export type Canal = "hogar" | "horeca";
 export type OrigenIngreso = "manual" | "excel" | "pedidos";
 export type EstadoFactura = "pendiente" | "pagado";
 export type TipoPago = "pago_proveedor" | "cobro_cliente";
-export type DestinoPago = "banco" | "caja";
+export type DestinoPago = "banco" | "caja" | "historico";
+export type DestinoCuenta = "banco" | "caja";
 export type TipoMovimiento = "credito" | "debito";
 
 export type Proveedor = {
@@ -93,6 +94,38 @@ export type MovimientoBancario = {
   notas: string | null;
   created_at: string;
   creado_por: string | null;
+};
+
+export type SaldoInicial = {
+  id: string;
+  destino: DestinoCuenta;
+  fecha: string;
+  monto: number;
+  notas: string | null;
+  created_at: string;
+  creado_por: string | null;
+};
+
+export type AjusteCajaBanco = {
+  id: string;
+  destino: DestinoCuenta;
+  fecha: string;
+  monto: number;
+  motivo: string;
+  created_at: string;
+  creado_por: string | null;
+  anulado: boolean;
+  anulado_at: string | null;
+  anulado_por: string | null;
+};
+
+export type VistaSaldoBancoCaja = {
+  destino: DestinoCuenta;
+  saldo_inicial_fecha: string | null;
+  saldo_inicial_monto: number;
+  monto_pagos: number;
+  monto_ajustes: number;
+  saldo_actual: number;
 };
 
 export type VistaFacturaSaldo = {
@@ -213,6 +246,17 @@ export const ORIGEN_INGRESO_LABELS: Record<OrigenIngreso, string> = {
   manual: "Manual",
   excel: "Excel",
   pedidos: "Pedidos (automático)",
+};
+
+export const DESTINO_CUENTA_LABELS: Record<DestinoCuenta, string> = {
+  banco: "Banco",
+  caja: "Caja / efectivo",
+};
+
+export const DESTINO_PAGO_LABELS: Record<DestinoPago, string> = {
+  banco: "Banco",
+  caja: "Caja / efectivo",
+  historico: "Histórico (cierre de cartera)",
 };
 
 export function formatCOP(value: number): string {

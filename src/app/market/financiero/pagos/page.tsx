@@ -1,16 +1,18 @@
 import { createClient } from "@/lib/supabase/server";
 import { PagoForm } from "./pago-form";
+import { CierreCarteraPanel } from "./cierre-cartera-panel";
 import { anularPago, anularPagosLote } from "./actions";
 import { AnularForm } from "@/components/anular-form";
 import { SeleccionProvider } from "@/components/seleccion-provider";
 import { CheckboxFila, CheckboxTodo } from "@/components/checkbox-seleccion";
 import { AnularSeleccionadosBar } from "@/components/anular-seleccionados-bar";
 import type {
+  DestinoPago,
   VistaFacturaSaldo,
   VistaIngresoSaldo,
   VistaPedidoSaldo,
 } from "@/lib/financiero/types";
-import { formatCOP, formatFechaCorta } from "@/lib/financiero/types";
+import { DESTINO_PAGO_LABELS, formatCOP, formatFechaCorta } from "@/lib/financiero/types";
 
 export const metadata = { title: "Recibos de pago · Módulo Financiero · Ciclo Market" };
 
@@ -19,7 +21,7 @@ type PagoConAplicacion = {
   tipo: "pago_proveedor" | "cobro_cliente";
   fecha: string;
   monto: number;
-  destino: "banco" | "caja";
+  destino: DestinoPago;
   referencia: string | null;
   pago_aplicaciones: {
     monto_aplicado: number;
@@ -87,6 +89,8 @@ export default async function PagosPage() {
         pedidosPendientes={pedidosPendientes ?? []}
       />
 
+      <CierreCarteraPanel />
+
       <SeleccionProvider idsVisibles={idsVisibles}>
         <AnularSeleccionadosBar idsVisibles={idsVisibles} action={anularPagosLote} />
 
@@ -139,7 +143,7 @@ export default async function PagosPage() {
                         {formatCOP(pago.monto)}
                       </td>
                       <td className="px-4 py-3 text-zinc-600 dark:text-zinc-300">
-                        {pago.destino === "banco" ? "Banco" : "Caja / efectivo"}
+                        {DESTINO_PAGO_LABELS[pago.destino]}
                       </td>
                       <td className="px-4 py-3">
                         <AnularForm

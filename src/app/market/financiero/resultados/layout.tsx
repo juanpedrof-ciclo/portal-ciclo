@@ -6,6 +6,7 @@ const SUBTABS = [
   { href: "/market/financiero/resultados/cuentas-por-cobrar", label: "Cuentas por cobrar" },
   { href: "/market/financiero/resultados/cartera-clientes", label: "Cartera clientes" },
   { href: "/market/financiero/resultados/conciliacion", label: "Conciliación bancaria" },
+  { href: "/market/financiero/resultados/banco-caja", label: "Banco y caja" },
 ];
 
 export default function ResultadosLayout({

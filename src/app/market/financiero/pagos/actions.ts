@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { DestinoPago, TipoPago } from "@/lib/financiero/types";
+import { DESTINO_PAGO_LABELS } from "@/lib/financiero/types";
 import type { ResultadoAnulacionLote } from "@/lib/financiero/anulacion-lote";
 
 export type EstadoFormularioPago = { error: string | null; ts?: number } | null;
@@ -37,7 +38,7 @@ export async function crearPago(
   if (!montoTexto || Number.isNaN(monto) || monto <= 0) {
     return { error: "Ingresa un monto válido." };
   }
-  if (destino !== "banco" && destino !== "caja") {
+  if (!Object.keys(DESTINO_PAGO_LABELS).includes(destino)) {
     return { error: "Selecciona el destino del dinero." };
   }
 
