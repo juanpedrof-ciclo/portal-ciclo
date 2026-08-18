@@ -1,14 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { TipoPL } from "./types";
+import type { TipoPL, Unidad } from "./types";
 
 export async function obtenerOCrearProveedor(
   supabase: SupabaseClient,
+  unidad: Unidad,
   nombre: string,
 ): Promise<string> {
   const nombreLimpio = nombre.trim();
   const { data: creado, error } = await supabase
     .from("proveedores")
-    .insert({ nombre: nombreLimpio })
+    .insert({ unidad, nombre: nombreLimpio })
     .select("id")
     .single();
 
@@ -18,6 +19,7 @@ export async function obtenerOCrearProveedor(
     const { data: existente } = await supabase
       .from("proveedores")
       .select("id")
+      .eq("unidad", unidad)
       .eq("nombre", nombreLimpio)
       .single();
     if (existente) return existente.id;
@@ -28,6 +30,7 @@ export async function obtenerOCrearProveedor(
 
 export async function obtenerOCrearCliente(
   supabase: SupabaseClient,
+  unidad: Unidad,
   nombre: string,
   telefono: string,
 ): Promise<string> {
@@ -36,7 +39,7 @@ export async function obtenerOCrearCliente(
 
   const { data: creado, error } = await supabase
     .from("clientes")
-    .insert({ nombre: nombreLimpio, telefono: telefonoLimpio })
+    .insert({ unidad, nombre: nombreLimpio, telefono: telefonoLimpio })
     .select("id")
     .single();
 
@@ -46,6 +49,7 @@ export async function obtenerOCrearCliente(
     const { data: existente } = await supabase
       .from("clientes")
       .select("id")
+      .eq("unidad", unidad)
       .eq("nombre", nombreLimpio)
       .eq("telefono", telefonoLimpio)
       .single();
@@ -57,13 +61,14 @@ export async function obtenerOCrearCliente(
 
 export async function obtenerOCrearCategoria(
   supabase: SupabaseClient,
+  unidad: Unidad,
   nombre: string,
   tipoPl: TipoPL,
 ): Promise<string> {
   const nombreLimpio = nombre.trim();
   const { data: creada, error } = await supabase
     .from("categorias")
-    .insert({ nombre: nombreLimpio, tipo_pl: tipoPl })
+    .insert({ unidad, nombre: nombreLimpio, tipo_pl: tipoPl })
     .select("id")
     .single();
 
@@ -73,6 +78,7 @@ export async function obtenerOCrearCategoria(
     const { data: existente } = await supabase
       .from("categorias")
       .select("id")
+      .eq("unidad", unidad)
       .eq("nombre", nombreLimpio)
       .single();
     if (existente) return existente.id;

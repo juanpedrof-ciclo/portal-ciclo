@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { TipoPL } from "./types";
+import type { TipoPL, Unidad } from "./types";
 
 export type ResumenPG = {
   ingresos: number;
@@ -37,6 +37,7 @@ const TOP_CATEGORIAS = 12;
 
 export async function obtenerDatosPG(
   supabase: SupabaseClient,
+  unidad: Unidad,
   desde: string,
   hasta: string,
 ): Promise<DatosPGCrudos> {
@@ -44,12 +45,14 @@ export async function obtenerDatosPG(
     supabase
       .from("ingresos_semanales")
       .select("fecha, monto_total")
+      .eq("unidad", unidad)
       .eq("anulado", false)
       .gte("fecha", desde)
       .lte("fecha", hasta),
     supabase
       .from("facturas")
       .select("fecha, monto, categoria_id, categorias(nombre, tipo_pl)")
+      .eq("unidad", unidad)
       .eq("anulado", false)
       .gte("fecha", desde)
       .lte("fecha", hasta),
@@ -140,8 +143,9 @@ export function desglosePorCategoria(datos: DatosPGCrudos): CategoriaPG[] {
 
 export async function calcularPG(
   supabase: SupabaseClient,
+  unidad: Unidad,
   desde: string,
   hasta: string,
 ): Promise<ResumenPG> {
-  return resumirPG(await obtenerDatosPG(supabase, desde, hasta));
+  return resumirPG(await obtenerDatosPG(supabase, unidad, desde, hasta));
 }

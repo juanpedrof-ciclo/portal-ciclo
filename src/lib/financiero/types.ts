@@ -1,3 +1,4 @@
+export type Unidad = "finca" | "market";
 export type TipoPL = "costo_producto" | "gasto_venta" | "gasto_administrativo";
 export type Canal = "hogar" | "horeca";
 export type OrigenIngreso = "manual" | "excel" | "pedidos";
@@ -9,6 +10,7 @@ export type TipoMovimiento = "credito" | "debito";
 
 export type Proveedor = {
   id: string;
+  unidad: Unidad;
   nombre: string;
   created_at: string;
   creado_por: string | null;
@@ -16,6 +18,7 @@ export type Proveedor = {
 
 export type Categoria = {
   id: string;
+  unidad: Unidad;
   nombre: string;
   tipo_pl: TipoPL;
   created_at: string;
@@ -24,6 +27,7 @@ export type Categoria = {
 
 export type IngresoSemanal = {
   id: string;
+  unidad: Unidad;
   fecha: string;
   monto_total: number;
   canal: Canal | null;
@@ -39,6 +43,7 @@ export type IngresoSemanal = {
 
 export type Factura = {
   id: string;
+  unidad: Unidad;
   proveedor_id: string;
   categoria_id: string;
   fecha: string;
@@ -61,6 +66,7 @@ export type FacturaConRelaciones = Factura & {
 
 export type Pago = {
   id: string;
+  unidad: Unidad;
   tipo: TipoPago;
   fecha: string;
   monto: number;
@@ -76,6 +82,7 @@ export type Pago = {
 
 export type PagoAplicacion = {
   id: string;
+  unidad: Unidad;
   pago_id: string;
   factura_id: string | null;
   ingreso_id: string | null;
@@ -85,6 +92,7 @@ export type PagoAplicacion = {
 
 export type MovimientoBancario = {
   id: string;
+  unidad: Unidad;
   fecha: string;
   descripcion: string | null;
   monto: number;
@@ -98,6 +106,7 @@ export type MovimientoBancario = {
 
 export type SaldoInicial = {
   id: string;
+  unidad: Unidad;
   destino: DestinoCuenta;
   fecha: string;
   monto: number;
@@ -108,6 +117,7 @@ export type SaldoInicial = {
 
 export type AjusteCajaBanco = {
   id: string;
+  unidad: Unidad;
   destino: DestinoCuenta;
   fecha: string;
   monto: number;
@@ -120,6 +130,7 @@ export type AjusteCajaBanco = {
 };
 
 export type VistaSaldoBancoCaja = {
+  unidad: Unidad;
   destino: DestinoCuenta;
   saldo_inicial_fecha: string | null;
   saldo_inicial_monto: number;
@@ -130,6 +141,7 @@ export type VistaSaldoBancoCaja = {
 
 export type VistaFacturaSaldo = {
   id: string;
+  unidad: Unidad;
   proveedor_id: string;
   proveedor_nombre: string;
   categoria_id: string;
@@ -148,6 +160,7 @@ export type VistaFacturaSaldo = {
 
 export type VistaIngresoSaldo = {
   id: string;
+  unidad: Unidad;
   fecha: string;
   monto_total: number;
   canal: Canal | null;
@@ -161,6 +174,7 @@ export type VistaIngresoSaldo = {
 
 export type Cliente = {
   id: string;
+  unidad: Unidad;
   nombre: string;
   telefono: string;
   created_at: string;
@@ -180,6 +194,7 @@ export type MapeoColumnas = {
 
 export type FormatoCarga = {
   id: string;
+  unidad: Unidad;
   nombre: string;
   mapeo_columnas: MapeoColumnas;
   created_at: string;
@@ -188,6 +203,7 @@ export type FormatoCarga = {
 
 export type Pedido = {
   id: string;
+  unidad: Unidad;
   cliente_id: string;
   formato_id: string | null;
   plataforma: string;
@@ -206,6 +222,7 @@ export type Pedido = {
 
 export type VistaPedidoSaldo = {
   id: string;
+  unidad: Unidad;
   cliente_id: string;
   cliente_nombre: string;
   cliente_telefono: string;
@@ -224,6 +241,7 @@ export type VistaPedidoSaldo = {
 
 export type VistaCarteraCliente = {
   cliente_id: string;
+  unidad: Unidad;
   nombre: string;
   telefono: string;
   pedidos_pendientes: number;

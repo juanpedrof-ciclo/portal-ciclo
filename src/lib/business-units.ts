@@ -47,7 +47,7 @@ export const businessUnits: BusinessUnit[] = [
     },
     modules: [
       {
-        slug: "administrativo-financiero",
+        slug: "financiero",
         name: "Módulo Administrativo y Financiero",
         description: "Cartera, cobros, pagos y costos de la operación.",
         icon: Wallet,

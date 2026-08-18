@@ -1,14 +1,16 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Canal } from "./types";
+import type { Canal, Unidad } from "./types";
 
 export async function recalcularIngresoPedidos(
   supabase: SupabaseClient,
+  unidad: Unidad,
   fecha: string,
   canal: Canal | null,
 ): Promise<void> {
   let sumaQuery = supabase
     .from("pedidos")
     .select("monto_total")
+    .eq("unidad", unidad)
     .eq("fecha", fecha)
     .eq("anulado", false);
   sumaQuery = canal ? sumaQuery.eq("canal", canal) : sumaQuery.is("canal", null);
@@ -24,6 +26,7 @@ export async function recalcularIngresoPedidos(
   let ingresoQuery = supabase
     .from("ingresos_semanales")
     .select("id")
+    .eq("unidad", unidad)
     .eq("fecha", fecha)
     .eq("origen", "pedidos");
   ingresoQuery = canal ? ingresoQuery.eq("canal", canal) : ingresoQuery.is("canal", null);
@@ -44,6 +47,7 @@ export async function recalcularIngresoPedidos(
     }
   } else {
     const { error } = await supabase.from("ingresos_semanales").insert({
+      unidad,
       fecha,
       monto_total: sumaFecha,
       canal,
