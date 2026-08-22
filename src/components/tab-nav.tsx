@@ -6,15 +6,16 @@ import { usePathname } from "next/navigation";
 export function TabNav({
   items,
 }: {
-  items: { href: string; label: string }[];
+  items: { href: string; label: string; exact?: boolean }[];
 }) {
   const pathname = usePathname();
 
   return (
     <nav className="-mb-px flex gap-1 overflow-x-auto">
       {items.map((item) => {
-        const active =
-          item.href === pathname || pathname.startsWith(`${item.href}/`);
+        const active = item.exact
+          ? item.href === pathname
+          : item.href === pathname || pathname.startsWith(`${item.href}/`);
         return (
           <Link
             key={item.href}
