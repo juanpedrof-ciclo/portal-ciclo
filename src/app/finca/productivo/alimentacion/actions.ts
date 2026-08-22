@@ -20,6 +20,7 @@ export async function crearAlimentacion(
   const kgTexto = String(formData.get("kg_alimento") ?? "");
   const kg_alimento = Number(kgTexto);
   const tipo_alimento = String(formData.get("tipo_alimento") ?? "") as TipoAlimento;
+  const insumo_id = String(formData.get("insumo_id") ?? "").trim() || null;
   const notas = String(formData.get("notas") ?? "").trim() || null;
 
   if (!grupo_id) return { error: "Selecciona el grupo." };
@@ -33,13 +34,14 @@ export async function crearAlimentacion(
 
   const { error } = await supabase
     .from("alimentacion_registros")
-    .insert({ grupo_id, fecha, kg_alimento, tipo_alimento, notas });
+    .insert({ grupo_id, fecha, kg_alimento, tipo_alimento, insumo_id, notas });
 
   if (error) return { error: `No se pudo guardar el registro: ${error.message}` };
 
   revalidatePath(RUTA);
   revalidatePath("/finca/productivo");
   revalidatePath("/finca/productivo/indicadores");
+  revalidatePath("/finca/productivo/insumos/inventario");
   return { error: null, ts: Date.now() };
 }
 
@@ -58,6 +60,7 @@ export async function anularAlimentacion(id: string): Promise<{ error: string | 
   revalidatePath(RUTA);
   revalidatePath("/finca/productivo");
   revalidatePath("/finca/productivo/indicadores");
+  revalidatePath("/finca/productivo/insumos/inventario");
   return { error: null };
 }
 
@@ -83,5 +86,6 @@ export async function anularAlimentacionLote(ids: string[]): Promise<ResultadoAn
   revalidatePath(RUTA);
   revalidatePath("/finca/productivo");
   revalidatePath("/finca/productivo/indicadores");
+  revalidatePath("/finca/productivo/insumos/inventario");
   return { anulados: ids.length, bloqueados: [] };
 }

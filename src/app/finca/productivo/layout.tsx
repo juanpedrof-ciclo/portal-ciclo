@@ -10,6 +10,7 @@ const mod = getModule("finca", "productivo")!;
 const TABS = [
   { href: `/finca/productivo`, label: "Inicio", exact: true },
   { href: `/finca/productivo/alimentacion`, label: "Alimentación" },
+  { href: `/finca/productivo/insumos`, label: "Insumos" },
   { href: `/finca/productivo/leche`, label: "Leche" },
   { href: `/finca/productivo/nacimientos`, label: "Nacimientos" },
   { href: `/finca/productivo/muertes`, label: "Muertes" },
@@ -17,6 +18,8 @@ const TABS = [
   { href: `/finca/productivo/reproduccion`, label: "Reproducción" },
   { href: `/finca/productivo/animales`, label: "Animales" },
   { href: `/finca/productivo/lotes`, label: "Lotes" },
+  { href: `/finca/productivo/tareas`, label: "Tareas" },
+  { href: `/finca/productivo/calificacion`, label: "Calificación" },
   { href: `/finca/productivo/indicadores`, label: "Indicadores" },
 ];
 

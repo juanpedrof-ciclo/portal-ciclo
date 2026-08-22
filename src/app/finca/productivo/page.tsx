@@ -6,6 +6,7 @@ import {
   Skull,
   Truck,
   HeartHandshake,
+  TriangleAlert,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { hoyISO, diasAtrasISO } from "@/lib/productivo/dates";
@@ -14,6 +15,7 @@ import {
   formatNumero,
   type AnimalEstado,
   type EstadoReproductivo,
+  type VistaInventarioInsumo,
   type VistaInventarioLote,
 } from "@/lib/productivo/types";
 
@@ -42,6 +44,8 @@ export default async function ProductivoInicioPage() {
     { data: kgHoyData },
     { count: muertesIndividualesRecientes },
     { data: muertesLoteRecientes },
+    { data: insumosBajoStock },
+    { count: tareasVencidas },
   ] = await Promise.all([
     supabase.from("grupos_animales").select("*").order("orden"),
     supabase
@@ -62,6 +66,13 @@ export default async function ProductivoInicioPage() {
       .gte("fecha", hace7)
       .eq("anulado", false),
     supabase.from("muertes_lote").select("cantidad").gte("fecha", hace7).eq("anulado", false),
+    supabase.from("vista_inventario_insumos").select("id, nombre").eq("bajo_stock", true),
+    supabase
+      .from("tareas")
+      .select("id", { count: "exact", head: true })
+      .neq("estado", "hecha")
+      .lt("fecha_limite", hoy)
+      .eq("anulado", false),
   ]);
 
   const gruposLista = grupos ?? [];
@@ -91,8 +102,37 @@ export default async function ProductivoInicioPage() {
     if (bucket && a.estado_reproductivo) bucket[a.estado_reproductivo] += 1;
   }
 
+  const insumosBajos = (insumosBajoStock as Pick<VistaInventarioInsumo, "id" | "nombre">[] | null) ?? [];
+  const hayAlertas = insumosBajos.length > 0 || (tareasVencidas ?? 0) > 0;
+
   return (
     <div className="flex flex-col gap-8">
+      {hayAlertas && (
+        <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
+          <div className="flex items-center gap-2 text-sm font-semibold text-amber-800 dark:text-amber-300">
+            <TriangleAlert className="size-4" />
+            Alertas
+          </div>
+          <ul className="mt-2 flex flex-col gap-1 text-sm text-amber-800 dark:text-amber-300">
+            {insumosBajos.length > 0 && (
+              <li>
+                <Link href="/finca/productivo/insumos/inventario" className="underline hover:no-underline">
+                  {insumosBajos.length} insumo(s) con stock bajo
+                </Link>
+                : {insumosBajos.map((i) => i.nombre).join(", ")}
+              </li>
+            )}
+            {(tareasVencidas ?? 0) > 0 && (
+              <li>
+                <Link href="/finca/productivo/tareas?estado=vencida" className="underline hover:no-underline">
+                  {tareasVencidas} tarea(s) vencida(s)
+                </Link>
+              </li>
+            )}
+          </ul>
+        </div>
+      )}
+
       <div>
         <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
           Registrar

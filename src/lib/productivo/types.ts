@@ -298,3 +298,148 @@ export function formatNumero(value: number, decimales = 1): string {
     maximumFractionDigits: decimales,
   }).format(value);
 }
+
+// ===== Insumos =====
+
+export type UnidadMedida = "kg" | "bultos" | "litros" | "unidades";
+
+export type InsumoCategoria = {
+  id: string;
+  unidad: "finca";
+  nombre: string;
+  created_at: string;
+  creado_por: string | null;
+};
+
+export type Insumo = {
+  id: string;
+  unidad: "finca";
+  nombre: string;
+  categoria_id: string;
+  unidad_medida: UnidadMedida;
+  stock_minimo: number | null;
+  notas: string | null;
+  created_at: string;
+  creado_por: string | null;
+};
+
+export type InsumoEntrada = {
+  id: string;
+  unidad: "finca";
+  insumo_id: string;
+  fecha: string;
+  cantidad: number;
+  proveedor: string | null;
+  costo: number | null;
+  notas: string | null;
+  created_at: string;
+  creado_por: string | null;
+  anulado: boolean;
+  anulado_at: string | null;
+  anulado_por: string | null;
+};
+
+export type InsumoSalida = {
+  id: string;
+  unidad: "finca";
+  insumo_id: string;
+  fecha: string;
+  cantidad: number;
+  motivo: string;
+  notas: string | null;
+  created_at: string;
+  creado_por: string | null;
+  anulado: boolean;
+  anulado_at: string | null;
+  anulado_por: string | null;
+};
+
+export type VistaInventarioInsumo = {
+  id: string;
+  unidad: "finca";
+  nombre: string;
+  categoria_id: string;
+  categoria_nombre: string;
+  unidad_medida: UnidadMedida;
+  stock_minimo: number | null;
+  total_entradas: number;
+  total_salidas: number;
+  total_consumo: number;
+  stock_actual: number;
+  bajo_stock: boolean;
+};
+
+export const UNIDAD_MEDIDA_LABELS: Record<UnidadMedida, string> = {
+  kg: "Kg",
+  bultos: "Bultos",
+  litros: "Litros",
+  unidades: "Unidades",
+};
+
+// ===== Tareas =====
+
+export type Trabajador = {
+  id: string;
+  unidad: "finca";
+  nombre: string;
+  activo: boolean;
+  created_at: string;
+  creado_por: string | null;
+};
+
+export type Prioridad = "alta" | "media" | "baja";
+export type EstadoTarea = "pendiente" | "en_proceso" | "hecha";
+
+export type Tarea = {
+  id: string;
+  unidad: "finca";
+  descripcion: string;
+  trabajador_id: string;
+  fecha_limite: string;
+  prioridad: Prioridad;
+  estado: EstadoTarea;
+  fecha_cumplida: string | null;
+  notas: string | null;
+  created_at: string;
+  creado_por: string | null;
+  anulado: boolean;
+  anulado_at: string | null;
+  anulado_por: string | null;
+};
+
+export const PRIORIDAD_LABELS: Record<Prioridad, string> = {
+  alta: "Alta",
+  media: "Media",
+  baja: "Baja",
+};
+
+export const ESTADO_TAREA_LABELS: Record<EstadoTarea, string> = {
+  pendiente: "Pendiente",
+  en_proceso: "En proceso",
+  hecha: "Hecha",
+};
+
+// ===== Calificación mensual =====
+
+export type CriterioCalificacion = {
+  id: string;
+  unidad: "finca";
+  nombre: string;
+  activo: boolean;
+  created_at: string;
+  creado_por: string | null;
+};
+
+export type Calificacion = {
+  id: string;
+  unidad: "finca";
+  mes: string;
+  criterio_id: string;
+  nota: number;
+  observaciones: string | null;
+  created_at: string;
+  creado_por: string | null;
+  anulado: boolean;
+  anulado_at: string | null;
+  anulado_por: string | null;
+};

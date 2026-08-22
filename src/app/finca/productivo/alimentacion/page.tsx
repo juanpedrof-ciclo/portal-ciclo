@@ -10,8 +10,10 @@ import { ListaPaginacion } from "@/components/lista-paginacion";
 import { ThOrdenable } from "@/components/lista-th-ordenable";
 import { normalizarListaParams, patronIlike } from "@/lib/financiero/list-query";
 import { formatFechaCorta } from "@/lib/financiero/types";
-import { obtenerGrupos, agruparPorId } from "@/lib/productivo/consultas";
+import { obtenerGrupos, agruparPorId, obtenerInsumos } from "@/lib/productivo/consultas";
 import { TIPO_ALIMENTO_LABELS, type AlimentacionRegistro } from "@/lib/productivo/types";
+
+type RegistroConInsumo = AlimentacionRegistro & { insumos: { nombre: string } | null };
 
 export const metadata = { title: "Alimentación · Módulo Productivo" };
 
@@ -29,18 +31,21 @@ export default async function AlimentacionPage({
   );
 
   const supabase = await createClient();
-  const grupos = await obtenerGrupos(supabase, { soloActivos: true });
+  const [grupos, insumos] = await Promise.all([
+    obtenerGrupos(supabase, { soloActivos: true }),
+    obtenerInsumos(supabase),
+  ]);
   const gruposPorId = agruparPorId(grupos);
 
   let query = supabase
     .from("alimentacion_registros")
-    .select("*", { count: "exact" })
+    .select("*, insumos(nombre)", { count: "exact" })
     .eq("anulado", false);
   if (q) query = query.ilike("notas", patronIlike(q));
   const { data: registros, count } = await query
     .order(sort, { ascending: dir === "asc" })
     .range(desde, hasta)
-    .returns<AlimentacionRegistro[]>();
+    .returns<RegistroConInsumo[]>();
 
   const idsVisibles = (registros ?? []).map((r) => r.id);
 
@@ -55,7 +60,7 @@ export default async function AlimentacionPage({
         </p>
       </div>
 
-      <AlimentacionForm grupos={grupos} action={crearAlimentacion} />
+      <AlimentacionForm grupos={grupos} insumos={insumos} action={crearAlimentacion} />
 
       <ListaBuscador
         basePath={RUTA}
@@ -79,6 +84,7 @@ export default async function AlimentacionPage({
                   <ThOrdenable basePath={RUTA} params={paramsBase} campo="grupo_id" label="Grupo" sortActual={sort} dirActual={dir} />
                   <ThOrdenable basePath={RUTA} params={paramsBase} campo="kg_alimento" label="Kg" sortActual={sort} dirActual={dir} align="right" />
                   <th className="px-4 py-3 font-medium">Tipo</th>
+                  <th className="px-4 py-3 font-medium">Insumo</th>
                   <th className="px-4 py-3 font-medium">Notas</th>
                   <th className="px-4 py-3 font-medium">Acciones</th>
                 </tr>
@@ -86,7 +92,7 @@ export default async function AlimentacionPage({
               <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                 {!registros || registros.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-6 text-center text-zinc-500 dark:text-zinc-400">
+                    <td colSpan={8} className="px-4 py-6 text-center text-zinc-500 dark:text-zinc-400">
                       {q ? "No se encontraron registros para esa búsqueda." : "Aún no hay registros de alimentación."}
                     </td>
                   </tr>
@@ -107,6 +113,9 @@ export default async function AlimentacionPage({
                       </td>
                       <td className="px-4 py-3 text-zinc-600 dark:text-zinc-300">
                         {TIPO_ALIMENTO_LABELS[r.tipo_alimento]}
+                      </td>
+                      <td className="px-4 py-3 text-zinc-600 dark:text-zinc-300">
+                        {r.insumos?.nombre ?? "—"}
                       </td>
                       <td className="px-4 py-3 text-zinc-500 dark:text-zinc-400">
                         {r.notas ?? "—"}

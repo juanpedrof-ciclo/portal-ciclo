@@ -1,5 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { AnimalEstado, GrupoAnimal, GrupoAnimalId } from "./types";
+import type {
+  AnimalEstado,
+  CriterioCalificacion,
+  GrupoAnimal,
+  GrupoAnimalId,
+  Insumo,
+  InsumoCategoria,
+  Trabajador,
+} from "./types";
 
 export async function obtenerGrupos(
   supabase: SupabaseClient,
@@ -53,4 +61,38 @@ export async function obtenerMapaAnimales(
   return Object.fromEntries(
     (data ?? []).map((a) => [a.id, { chapeta: a.chapeta, grupo_id: a.grupo_id }]),
   );
+}
+
+export async function obtenerInsumoCategorias(supabase: SupabaseClient): Promise<InsumoCategoria[]> {
+  const { data } = await supabase
+    .from("insumo_categorias")
+    .select("*")
+    .order("nombre")
+    .returns<InsumoCategoria[]>();
+  return data ?? [];
+}
+
+export async function obtenerInsumos(supabase: SupabaseClient): Promise<Insumo[]> {
+  const { data } = await supabase.from("insumos").select("*").order("nombre").returns<Insumo[]>();
+  return data ?? [];
+}
+
+export async function obtenerTrabajadores(
+  supabase: SupabaseClient,
+  opciones?: { soloActivos?: boolean },
+): Promise<Trabajador[]> {
+  let query = supabase.from("trabajadores").select("*").order("nombre");
+  if (opciones?.soloActivos) query = query.eq("activo", true);
+  const { data } = await query.returns<Trabajador[]>();
+  return data ?? [];
+}
+
+export async function obtenerCriteriosCalificacion(
+  supabase: SupabaseClient,
+  opciones?: { soloActivos?: boolean },
+): Promise<CriterioCalificacion[]> {
+  let query = supabase.from("criterios_calificacion").select("*").order("nombre");
+  if (opciones?.soloActivos) query = query.eq("activo", true);
+  const { data } = await query.returns<CriterioCalificacion[]>();
+  return data ?? [];
 }
