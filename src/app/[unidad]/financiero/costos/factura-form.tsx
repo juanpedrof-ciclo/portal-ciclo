@@ -87,12 +87,15 @@ function FacturaFormCampos({
     if (!file) return;
 
     setLeyendoIA(true);
+    const controlador = new AbortController();
+    const timeout = setTimeout(() => controlador.abort(), 55_000);
     try {
       const fd = new FormData();
       fd.append("archivo", file);
       const res = await fetch(`/${unidad}/financiero/costos/leer-factura`, {
         method: "POST",
         body: fd,
+        signal: controlador.signal,
       });
       const json = await res.json();
       if (!res.ok) {
@@ -119,9 +122,14 @@ function FacturaFormCampos({
       }
 
       setCompletadoPorIA(true);
-    } catch {
-      setErrorIA("No se pudo leer la factura.");
+    } catch (err) {
+      setErrorIA(
+        err instanceof DOMException && err.name === "AbortError"
+          ? "La lectura de la factura tardó demasiado."
+          : "No se pudo leer la factura.",
+      );
     } finally {
+      clearTimeout(timeout);
       setLeyendoIA(false);
     }
   }
@@ -270,7 +278,11 @@ function FacturaFormCampos({
             className={`${inputClass} file:mr-3 file:rounded-md file:border-0 file:bg-amber-600 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white`}
           />
           {leyendoIA && (
-            <p className="mt-1.5 text-sm text-zinc-500 dark:text-zinc-400">
+            <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-amber-600 dark:text-amber-400">
+              <span
+                aria-hidden
+                className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-amber-600/30 border-t-amber-600 dark:border-amber-400/30 dark:border-t-amber-400"
+              />
               Leyendo factura con IA…
             </p>
           )}
@@ -312,10 +324,10 @@ function FacturaFormCampos({
 
       <button
         type="submit"
-        disabled={isPending}
+        disabled={isPending || leyendoIA}
         className="inline-flex w-fit items-center justify-center rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-amber-700 disabled:opacity-60"
       >
-        {isPending ? "Guardando…" : "Guardar factura"}
+        {isPending ? "Guardando…" : leyendoIA ? "Leyendo factura…" : "Guardar factura"}
       </button>
     </form>
   );

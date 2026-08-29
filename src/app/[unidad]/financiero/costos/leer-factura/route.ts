@@ -2,6 +2,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { leerFacturaConIA } from "@/lib/financiero/leer-factura-ia";
 
+// unpdf + SDK de Anthropic necesitan el runtime de Node.
+export const runtime = "nodejs";
+// Vercel Hobby permite hasta 60s por función; sin esto el corte es a los 10s.
+export const maxDuration = 60;
+
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const {

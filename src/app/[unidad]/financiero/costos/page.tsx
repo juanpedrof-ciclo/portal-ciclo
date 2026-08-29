@@ -14,6 +14,10 @@ import { formatCOP, formatFechaCorta } from "@/lib/financiero/types";
 
 export const metadata = { title: "Costos y gastos · Módulo Financiero" };
 
+// El Server Action crearFactura sube el soporte a Storage; sin esto Vercel
+// Hobby cortaría a los 10s. 60s es el tope del plan.
+export const maxDuration = 60;
+
 const COLUMNAS_ORDEN = [
   "fecha",
   "proveedor_nombre",
