@@ -8,7 +8,7 @@ import { AnularSeleccionadosBar } from "@/components/anular-seleccionados-bar";
 import { ListaBuscador } from "@/components/lista-buscador";
 import { ListaPaginacion } from "@/components/lista-paginacion";
 import { ThOrdenable } from "@/components/lista-th-ordenable";
-import { normalizarListaParams, patronIlike } from "@/lib/financiero/list-query";
+import { idsPorNombre, normalizarListaParams, patronIlike } from "@/lib/financiero/list-query";
 import type { Categoria, Proveedor, Unidad, VistaFacturaSaldo } from "@/lib/financiero/types";
 import { formatCOP, formatFechaCorta } from "@/lib/financiero/types";
 
@@ -39,36 +39,61 @@ export default async function CostosPage({
 
   const supabase = await createClient();
 
+  // Búsqueda por nombre de proveedor traducida a un filtro por FK indexada
+  // (proveedor_nombre es columna calculada de la vista, no se puede indexar).
+  const proveedorIds = q
+    ? await idsPorNombre(supabase, "proveedores", unidad, q)
+    : [];
+  const filtroBusqueda = q
+    ? [
+        `numero_factura.ilike.${patronIlike(q)}`,
+        ...(proveedorIds.length
+          ? [`proveedor_id.in.(${proveedorIds.join(",")})`]
+          : []),
+      ].join(",")
+    : null;
+
+  // Conteo del paginador: sobre la tabla base, no sobre la vista con joins +
+  // agregación (el count exacto sobre la vista obligaba a materializarla entera).
+  let countQuery = supabase
+    .from("facturas")
+    .select("id", { count: "exact", head: true })
+    .eq("unidad", unidad)
+    .eq("anulado", false);
+  if (filtroBusqueda) countQuery = countQuery.or(filtroBusqueda);
+
+  // Datos de la página: sí desde la vista (necesita saldo_pendiente y nombres),
+  // pero sin count y solo 50 filas.
   let facturasQuery = supabase
     .from("vista_facturas_saldo")
-    .select("*", { count: "exact" })
+    .select("*")
     .eq("unidad", unidad);
-  if (q) {
-    const patron = patronIlike(q);
-    facturasQuery = facturasQuery.or(
-      `proveedor_nombre.ilike.${patron},numero_factura.ilike.${patron}`,
-    );
-  }
+  if (filtroBusqueda) facturasQuery = facturasQuery.or(filtroBusqueda);
 
-  const [{ data: proveedores }, { data: categorias }, { data: facturas, count }] =
-    await Promise.all([
-      supabase
-        .from("proveedores")
-        .select("*")
-        .eq("unidad", unidad)
-        .order("nombre")
-        .returns<Proveedor[]>(),
-      supabase
-        .from("categorias")
-        .select("*")
-        .eq("unidad", unidad)
-        .order("nombre")
-        .returns<Categoria[]>(),
-      facturasQuery
-        .order(sort, { ascending: dir === "asc" })
-        .range(desde, hasta)
-        .returns<VistaFacturaSaldo[]>(),
-    ]);
+  const [
+    { data: proveedores },
+    { data: categorias },
+    { data: facturas },
+    { count },
+  ] = await Promise.all([
+    supabase
+      .from("proveedores")
+      .select("*")
+      .eq("unidad", unidad)
+      .order("nombre")
+      .returns<Proveedor[]>(),
+    supabase
+      .from("categorias")
+      .select("*")
+      .eq("unidad", unidad)
+      .order("nombre")
+      .returns<Categoria[]>(),
+    facturasQuery
+      .order(sort, { ascending: dir === "asc" })
+      .range(desde, hasta)
+      .returns<VistaFacturaSaldo[]>(),
+    countQuery,
+  ]);
 
   const idsVisibles = (facturas ?? []).map((f) => f.id);
 

@@ -9,7 +9,7 @@ import { AnularSeleccionadosBar } from "@/components/anular-seleccionados-bar";
 import { ListaBuscador } from "@/components/lista-buscador";
 import { ListaPaginacion } from "@/components/lista-paginacion";
 import { ThOrdenable } from "@/components/lista-th-ordenable";
-import { normalizarListaParams, patronIlike } from "@/lib/financiero/list-query";
+import { idsPorNombre, normalizarListaParams, patronIlike } from "@/lib/financiero/list-query";
 import type { Unidad, VistaPedidoSaldo } from "@/lib/financiero/types";
 import { formatCOP, formatFechaCorta } from "@/lib/financiero/types";
 
@@ -38,18 +38,37 @@ export default async function VentasPage({
   );
 
   const supabase = await createClient();
-  let query = supabase
-    .from("vista_pedidos_saldo")
-    .select("*", { count: "exact" })
-    .eq("unidad", unidad);
-  if (q) {
-    const patron = patronIlike(q);
-    query = query.or(`cliente_nombre.ilike.${patron},id_orden_externo.ilike.${patron}`);
-  }
-  const { data: pedidos, count } = await query
-    .order(sort, { ascending: dir === "asc" })
-    .range(desde, hasta)
-    .returns<VistaPedidoSaldo[]>();
+
+  // Búsqueda por nombre de cliente traducida a filtro por FK indexada
+  // (cliente_nombre es columna calculada de la vista).
+  const clienteIds = q
+    ? await idsPorNombre(supabase, "clientes", unidad, q)
+    : [];
+  const filtroBusqueda = q
+    ? [
+        `id_orden_externo.ilike.${patronIlike(q)}`,
+        ...(clienteIds.length ? [`cliente_id.in.(${clienteIds.join(",")})`] : []),
+      ].join(",")
+    : null;
+
+  // Conteo del paginador sobre la tabla base, no sobre la vista con joins.
+  let countQuery = supabase
+    .from("pedidos")
+    .select("id", { count: "exact", head: true })
+    .eq("unidad", unidad)
+    .eq("anulado", false);
+  if (filtroBusqueda) countQuery = countQuery.or(filtroBusqueda);
+
+  let query = supabase.from("vista_pedidos_saldo").select("*").eq("unidad", unidad);
+  if (filtroBusqueda) query = query.or(filtroBusqueda);
+
+  const [{ data: pedidos }, { count }] = await Promise.all([
+    query
+      .order(sort, { ascending: dir === "asc" })
+      .range(desde, hasta)
+      .returns<VistaPedidoSaldo[]>(),
+    countQuery,
+  ]);
 
   const idsVisibles = (pedidos ?? []).map((p) => p.id);
 

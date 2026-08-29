@@ -1,3 +1,5 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 export const TAMANO_PAGINA = 50;
 
 export type DirOrden = "asc" | "desc";
@@ -62,4 +64,29 @@ export function sanitizarBusqueda(q: string): string {
 
 export function patronIlike(q: string): string {
   return `%${sanitizarBusqueda(q)}%`;
+}
+
+// Tope de FKs a expandir en un filtro `.in(...)` de búsqueda: una búsqueda por
+// nombre real coincide con pocas filas; esto solo evita URLs enormes.
+const MAX_IDS_BUSQUEDA = 200;
+
+/**
+ * IDs de una tabla de referencia (proveedores, clientes) cuyo `nombre` coincide
+ * con la búsqueda. Sirve para traducir una búsqueda por nombre —columna
+ * calculada en las vistas, sin índice— a un filtro por FK indexada de la tabla
+ * base, y para contar sin tocar la vista con joins.
+ */
+export async function idsPorNombre(
+  supabase: SupabaseClient,
+  tabla: string,
+  unidad: string,
+  q: string,
+): Promise<string[]> {
+  const { data } = await supabase
+    .from(tabla)
+    .select("id")
+    .eq("unidad", unidad)
+    .ilike("nombre", patronIlike(q))
+    .limit(MAX_IDS_BUSQUEDA);
+  return (data ?? []).map((r) => (r as { id: string }).id);
 }

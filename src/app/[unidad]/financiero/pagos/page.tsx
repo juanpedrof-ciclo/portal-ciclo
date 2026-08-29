@@ -52,7 +52,7 @@ export default async function PagosPage({
 
   let pagosQuery = supabase
     .from("vista_pagos_detalle")
-    .select("*", { count: "exact" })
+    .select("*")
     .eq("unidad", unidad)
     .eq("anulado", false);
   if (q) {
@@ -60,11 +60,22 @@ export default async function PagosPage({
     pagosQuery = pagosQuery.or(`referencia.ilike.${patron},contraparte_nombre.ilike.${patron}`);
   }
 
+  // Conteo del paginador sobre la tabla base, no sobre la vista con el lateral.
+  // Al buscar solo se filtra por `referencia`; el total mostrado no refleja
+  // coincidencias por nombre de contraparte (la lista sí las incluye).
+  let countQuery = supabase
+    .from("pagos")
+    .select("id", { count: "exact", head: true })
+    .eq("unidad", unidad)
+    .eq("anulado", false);
+  if (q) countQuery = countQuery.ilike("referencia", patronIlike(q));
+
   const [
     { data: facturasPendientes },
     { data: ingresosPendientes },
     { data: pedidosPendientes },
-    { data: pagos, count },
+    { data: pagos },
+    { count },
   ] = await Promise.all([
     supabase
       .from("vista_facturas_saldo")
@@ -72,6 +83,7 @@ export default async function PagosPage({
       .eq("unidad", unidad)
       .gt("saldo_pendiente", 0)
       .order("fecha", { ascending: true })
+      .limit(500)
       .returns<VistaFacturaSaldo[]>(),
     supabase
       .from("vista_ingresos_saldo")
@@ -79,6 +91,7 @@ export default async function PagosPage({
       .eq("unidad", unidad)
       .gt("saldo_pendiente", 0)
       .order("fecha", { ascending: true })
+      .limit(500)
       .returns<VistaIngresoSaldo[]>(),
     supabase
       .from("vista_pedidos_saldo")
@@ -86,11 +99,13 @@ export default async function PagosPage({
       .eq("unidad", unidad)
       .gt("saldo_pendiente", 0)
       .order("fecha", { ascending: true })
+      .limit(500)
       .returns<VistaPedidoSaldo[]>(),
     pagosQuery
       .order(sort, { ascending: dir === "asc" })
       .range(desde, hasta)
       .returns<PagoDetalle[]>(),
+    countQuery,
   ]);
 
   const idsVisibles = (pagos ?? []).map((p) => p.id);
