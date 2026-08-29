@@ -1,5 +1,4 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { extractText, getDocumentProxy } from "unpdf";
 
 const MODELO = "claude-haiku-4-5";
 const TAMANO_MAXIMO_BYTES = 15 * 1024 * 1024;
@@ -68,6 +67,9 @@ type BloqueContenido =
  */
 async function extraerTextoPdf(buffer: ArrayBuffer): Promise<string | null> {
   try {
+    // Import dinámico: unpdf (con pdf.js dentro) solo se carga la primera vez que
+    // se lee un PDF, nunca al inicializar la función ni en otras rutas.
+    const { extractText, getDocumentProxy } = await import("unpdf");
     // Copia defensiva: pdf.js puede "detachar" el ArrayBuffer que recibe, y
     // necesitamos el original intacto por si hay que caer al envío como documento.
     const pdf = await getDocumentProxy(new Uint8Array(buffer.slice(0)));
