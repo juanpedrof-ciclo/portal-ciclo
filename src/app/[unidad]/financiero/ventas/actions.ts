@@ -12,7 +12,9 @@ import { formatFechaCorta } from "@/lib/financiero/types";
 import type { ResultadoAnulacionLote } from "@/lib/financiero/anulacion-lote";
 
 export type ResumenCarga = {
-  pedidos: number;
+  pedidosNuevos: number;
+  pedidosOmitidos: number;
+  totalProcesados: number;
   clientesNuevos: number;
   montoTotal: number;
   advertencias: string[];
@@ -74,6 +76,22 @@ export async function procesarCargaVentas(
         "No se encontraron pedidos válidos en el archivo. Revisa el mapeo de columnas.",
     };
   }
+
+  // Se detectan duplicados (mismo unidad+plataforma+id_orden_externo) ANTES de
+  // guardar, para poder informar cuántos pedidos eran realmente nuevos y
+  // cuántos ya estaban cargados (el upsert los actualiza en silencio).
+  const { data: pedidosExistentes } = await supabase
+    .from("pedidos")
+    .select("id_orden_externo")
+    .eq("unidad", unidad)
+    .eq("plataforma", nombreFormato)
+    .in(
+      "id_orden_externo",
+      pedidosAgrupados.map((p) => p.idOrdenExterno),
+    );
+  const idsOrdenExistentes = new Set(
+    (pedidosExistentes ?? []).map((p) => p.id_orden_externo),
+  );
 
   let formato_id: string | null =
     String(formData.get("formato_id_existente") ?? "") || null;
@@ -194,11 +212,17 @@ export async function procesarCargaVentas(
   revalidatePath(`/${unidad}/financiero/resultados/pg`);
   revalidatePath(`/${unidad}/financiero/resultados/cartera-clientes`);
 
+  const pedidosOmitidos = filasPedidos.filter((f) =>
+    idsOrdenExistentes.has(f.id_orden_externo),
+  ).length;
+
   return {
     error: null,
     ts: Date.now(),
     resumen: {
-      pedidos: filasPedidos.length,
+      pedidosNuevos: filasPedidos.length - pedidosOmitidos,
+      pedidosOmitidos,
+      totalProcesados: filasPedidos.length,
       clientesNuevos: (clientesDespues ?? 0) - (clientesAntes ?? 0),
       montoTotal: filasPedidos.reduce((sum, f) => sum + f.monto_total, 0),
       advertencias,

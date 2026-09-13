@@ -242,9 +242,29 @@ function CargaFormCampos({
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
       {resumen && (
-        <div className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
-          <p>
-            {resumen.pedidos} pedidos cargados · {formatCOP(resumen.montoTotal)} ·{" "}
+        <div
+          className={
+            resumen.pedidosOmitidos > 0
+              ? "rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-900/30 dark:text-amber-200"
+              : "rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
+          }
+        >
+          <p className="font-medium">
+            Se {resumen.pedidosNuevos === 1 ? "cargó" : "cargaron"} {resumen.pedidosNuevos}{" "}
+            {resumen.pedidosNuevos === 1 ? "pedido nuevo" : "pedidos nuevos"}.
+          </p>
+          {resumen.pedidosOmitidos > 0 && (
+            <p className="mt-1 font-medium">
+              ⚠ Se {resumen.pedidosOmitidos === 1 ? "omitió" : "omitieron"}{" "}
+              {resumen.pedidosOmitidos}{" "}
+              {resumen.pedidosOmitidos === 1
+                ? "pedido que ya estaba en el sistema (duplicado)"
+                : "pedidos que ya estaban en el sistema (duplicados)"}
+              .
+            </p>
+          )}
+          <p className="mt-1">
+            Total procesados: {resumen.totalProcesados} · {formatCOP(resumen.montoTotal)} ·{" "}
             {resumen.clientesNuevos} clientes nuevos.
           </p>
           {resumen.advertencias.map((a) => (
