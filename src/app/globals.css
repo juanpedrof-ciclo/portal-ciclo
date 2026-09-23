@@ -11,6 +11,9 @@
   --chart-gasto-venta: #eda100;
   --chart-gasto-administrativo: #4a3aa7;
   --chart-otros: #898781;
+  --chart-hogar: #2a78d6;
+  --chart-horeca: #1baf7a;
+  --chart-anterior: #a1a1aa;
   --chart-grid: #e4e4e7;
   --chart-axis: #71717a;
   --chart-tooltip-bg: #ffffff;
@@ -37,6 +40,9 @@
     --chart-gasto-venta: #c98500;
     --chart-gasto-administrativo: #9085e9;
     --chart-otros: #898781;
+    --chart-hogar: #3987e5;
+    --chart-horeca: #199e70;
+    --chart-anterior: #71717a;
     --chart-grid: #27272a;
     --chart-axis: #a1a1aa;
     --chart-tooltip-bg: #18181b;

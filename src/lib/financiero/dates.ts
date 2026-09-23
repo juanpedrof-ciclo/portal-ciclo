@@ -109,6 +109,19 @@ export function mesesEnRango(desde: string, hasta: string) {
   return rangos;
 }
 
+export function rangoAnterior(desde: string, hasta: string) {
+  const inicio = new Date(`${desde}T00:00:00Z`);
+  const fin = new Date(`${hasta}T00:00:00Z`);
+  const dias = Math.round((fin.getTime() - inicio.getTime()) / 86_400_000) + 1;
+
+  const hastaAnterior = new Date(inicio);
+  hastaAnterior.setUTCDate(hastaAnterior.getUTCDate() - 1);
+  const desdeAnterior = new Date(hastaAnterior);
+  desdeAnterior.setUTCDate(desdeAnterior.getUTCDate() - (dias - 1));
+
+  return { desde: toISODate(desdeAnterior), hasta: toISODate(hastaAnterior) };
+}
+
 export function ultimosMeses(n: number, hoy = new Date()) {
   const rangos: { desde: string; hasta: string; etiqueta: string }[] = [];
   for (let i = n - 1; i >= 0; i--) {

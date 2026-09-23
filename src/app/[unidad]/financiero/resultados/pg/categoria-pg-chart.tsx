@@ -16,7 +16,13 @@ function colorDe(item: CategoriaPG): string {
   return COLOR_POR_TIPO[item.tipoPl];
 }
 
-export function CategoriaPGChart({ datos }: { datos: CategoriaPG[] }) {
+export function CategoriaPGChart({
+  datos,
+  onSeleccionar,
+}: {
+  datos: CategoriaPG[];
+  onSeleccionar?: (item: CategoriaPG) => void;
+}) {
   return (
     <div>
       <div className="h-72 w-full">
@@ -54,7 +60,19 @@ export function CategoriaPGChart({ datos }: { datos: CategoriaPG[] }) {
               }}
               labelStyle={{ color: "var(--chart-tooltip-text)", fontWeight: 600 }}
             />
-            <Bar dataKey="monto" radius={[0, 4, 4, 0]}>
+            <Bar
+              dataKey="monto"
+              radius={[0, 4, 4, 0]}
+              onClick={
+                onSeleccionar
+                  ? (data: unknown) => {
+                      const payload = (data as { payload?: CategoriaPG })?.payload;
+                      if (payload) onSeleccionar(payload);
+                    }
+                  : undefined
+              }
+              style={onSeleccionar ? { cursor: "pointer" } : undefined}
+            >
               {datos.map((item) => (
                 <Cell key={item.categoriaId} fill={colorDe(item)} />
               ))}

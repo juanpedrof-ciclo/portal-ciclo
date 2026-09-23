@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import {
+  calcularConcentracion,
+  desglosePorCanal,
   desglosePorCategoria,
   obtenerDatosPG,
   resumirPG,
@@ -11,6 +13,7 @@ import {
 import {
   mesesEnRango,
   rangoAnioActual,
+  rangoAnterior,
   rangoMesActual,
   rangoSemanaActual,
   semanasEnRango,
@@ -18,9 +21,19 @@ import {
 } from "@/lib/financiero/dates";
 import { Campo, inputClass } from "@/components/form-field";
 import { formatCOP, formatFechaCorta, type Unidad } from "@/lib/financiero/types";
+import { ExportarTabla, type ColumnaExport } from "@/components/exportar-tabla";
 import { DashboardPG } from "./dashboard-pg";
 
 const UMBRAL_SEMANAS_TENDENCIA = 13;
+
+function slugify(texto: string): string {
+  return texto
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
 
 export const metadata = { title: "P&G · Módulo Financiero" };
 
@@ -38,9 +51,15 @@ export default async function PGPage({
   const desde = desdeParam || defecto.desde;
   const hasta = hastaParam || defecto.hasta;
 
+  const rangoAnt = rangoAnterior(desde, hasta);
+
   const supabase = await createClient();
-  const datos = await obtenerDatosPG(supabase, unidad, desde, hasta);
+  const [datos, datosAnterior] = await Promise.all([
+    obtenerDatosPG(supabase, unidad, desde, hasta),
+    obtenerDatosPG(supabase, unidad, rangoAnt.desde, rangoAnt.hasta),
+  ]);
   const resumen = resumirPG(datos);
+  const resumenAnterior = resumirPG(datosAnterior);
 
   const semanas = semanasEnRango(desde, hasta);
   const pgSemanas = resumirPorBuckets(datos, semanas);
@@ -51,17 +70,34 @@ export default async function PGPage({
     granularidad === "semana" ? semanas : mesesEnRango(desde, hasta);
   const resumenTendencia =
     granularidad === "semana" ? pgSemanas : resumirPorBuckets(datos, bucketsTendencia);
-  const tendencia: PuntoTendenciaPG[] = bucketsTendencia.map((bucket, i) => ({
-    etiqueta: bucket.etiqueta,
-    ingresos: resumenTendencia[i].ingresos,
-    costos:
-      resumenTendencia[i].costoProducto +
-      resumenTendencia[i].gastoVenta +
-      resumenTendencia[i].gastoAdministrativo,
-    utilidad: resumenTendencia[i].utilidad,
-  }));
+
+  const bucketsTendenciaAnterior =
+    granularidad === "semana"
+      ? semanasEnRango(rangoAnt.desde, rangoAnt.hasta)
+      : mesesEnRango(rangoAnt.desde, rangoAnt.hasta);
+  const resumenTendenciaAnterior = resumirPorBuckets(datosAnterior, bucketsTendenciaAnterior);
+
+  const tendencia: PuntoTendenciaPG[] = bucketsTendencia.map((bucket, i) => {
+    const anterior = resumenTendenciaAnterior[i];
+    return {
+      etiqueta: bucket.etiqueta,
+      ingresos: resumenTendencia[i].ingresos,
+      costos:
+        resumenTendencia[i].costoProducto +
+        resumenTendencia[i].gastoVenta +
+        resumenTendencia[i].gastoAdministrativo,
+      utilidad: resumenTendencia[i].utilidad,
+      ingresosAnterior: anterior?.ingresos,
+      costosAnterior: anterior
+        ? anterior.costoProducto + anterior.gastoVenta + anterior.gastoAdministrativo
+        : undefined,
+      utilidadAnterior: anterior?.utilidad,
+    };
+  });
 
   const categorias = desglosePorCategoria(datos);
+  const canales = desglosePorCanal(datos);
+  const concentracion = calcularConcentracion(datos, resumen.ingresos);
   const hayDatos = datos.ingresos.length > 0 || datos.facturas.length > 0;
 
   return (
@@ -70,9 +106,14 @@ export default async function PGPage({
 
       <DashboardPG
         resumen={resumen}
+        resumenAnterior={resumenAnterior}
         tendencia={tendencia}
         granularidad={granularidad}
         categorias={categorias}
+        facturas={datos.facturas}
+        canales={canales}
+        pedidos={datos.pedidos}
+        concentracion={concentracion}
         hayDatos={hayDatos}
       />
 
@@ -177,11 +218,35 @@ function TablaPG({
     { label: "Utilidad", key: "utilidad" },
   ];
 
+  const columnasExport: ColumnaExport[] = [
+    { key: "concepto", header: "Concepto", tipo: "texto" },
+    ...etiquetas.map((etiqueta, i) => ({
+      key: `col${i}`,
+      header: etiqueta,
+      tipo: "moneda" as const,
+    })),
+  ];
+  const filasExport = filas.map((fila) => {
+    const fixed: Record<string, unknown> = { concepto: fila.label };
+    valores.forEach((v, i) => {
+      const valor = v[fila.key];
+      fixed[`col${i}`] = fila.negativo ? -valor : valor;
+    });
+    return fixed;
+  });
+
   return (
     <section>
-      <h3 className="mb-3 text-sm font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-        {titulo}
-      </h3>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h3 className="text-sm font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+          {titulo}
+        </h3>
+        <ExportarTabla
+          columnas={columnasExport}
+          filas={filasExport}
+          nombreArchivo={slugify(titulo)}
+        />
+      </div>
       <div className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
